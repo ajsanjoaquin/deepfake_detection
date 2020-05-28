@@ -63,8 +63,9 @@ with torch.no_grad():
     checkpoint = torch.load(args.load_checkpoint)
     print('##acc:',checkpoint['acc'])
 
-    model.load_state_dict(checkpoint['net'])
-    model.cuda()
+    model.load_state_dict(checkpoint['net'],map_location=torch.device('cpu'))
+    if torch.cuda.is_available():
+        model.cuda()
     #get prediction labels
     output = model(data)
     pred = torch.max(output, dim=1)[1]
@@ -104,9 +105,7 @@ if not os.path.isdir(img_folder):
 
 types = ['Original', 'Your Model']
 
-fig, _axs = plt.subplots(nrows=len(out_list), ncols=len(te_dataset.samples),figsize = [24,7.5])
-
-axs = _axs
+fig, axs = plt.subplots(nrows=len(out_list), ncols=len(te_dataset.samples),figsize = [24,7.5])
 
 for j, _type in enumerate(types):
     axs[j, 0].set_ylabel(_type)
