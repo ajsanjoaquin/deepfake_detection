@@ -38,6 +38,4 @@ class VanillaBackprop():
             grad = torch.autograd.grad(model_output, x, grad_outputs=grad_outputs, 
                         only_inputs=True)[0]
 
-            self.model.train()
-
         return grad
