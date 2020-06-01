@@ -11,7 +11,8 @@ def parser():
         help='the directory to save the logs or other imformations (e.g. images)')
     parser.add_argument('--model_root', default='checkpoint', help='the directory to save the models')
     parser.add_argument('--load_checkpoint', default='./model/default/model.pth')
-    parser.add_argument('--affix', default='default', help='the affix for the save folder')
+    parser.add_argument('--affix', default='', help='the affix for the save folder')
+    parser.add_argument('--output', help='specify location of output')
 
     # parameters for generating adversarial examples
     parser.add_argument('--epsilon', '-e', type=float, default=0.0157, 

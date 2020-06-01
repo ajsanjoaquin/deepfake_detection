@@ -15,8 +15,18 @@ from src.xception_2 import myxception_
 from src.argument import parser
 
 args=parser()
-img_folder = '/content/outputs'
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#output location
+img_folder = args.output
+tp=os.path.join(args.output,'true_positives')
+tn=os.path.join(args.output,'true_negatives')
+fp=os.path.join(args.output,'false_positives')
+fn=os.path.join(args.output,'false_negatives')
+locations=[img_folder,tp,tn,fp,fn]
+
+for folder in locations:
+    if not os.path.isdir(folder):
+        mkdir(folder)
 ################################################
 test_transform = transforms.Compose([transforms.Resize((299,299)),
           transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -60,12 +70,13 @@ pred_list = []
 #model instantiation
 with torch.no_grad():
     model = myxception_(num_classes=2, pretrained='imagenet')
-    checkpoint = torch.load(args.load_checkpoint)
+    if device.type=='cpu':
+      checkpoint = torch.load(args.load_checkpoint,map_location=torch.device('cpu'))
+    else:
+      checkpoint = torch.load(args.load_checkpoint)
+      model.cuda()
+    model.load_state_dict(checkpoint['net'])
     print('##acc:',checkpoint['acc'])
-
-    model.load_state_dict(checkpoint['net'],map_location=torch.device('cpu'))
-    if torch.cuda.is_available():
-        model.cuda()
     #get prediction labels
     output = model(data)
     pred = torch.max(output, dim=1)[1]
@@ -82,9 +93,6 @@ std = std.repeat(1, 1, data.shape[2], data.shape[3])
 
 grad = torch.max(torch.min(grad, mean+3*std), mean-3*std)
 
-print('##grad:',grad.size())
-print(grad.min(), grad.max())
-
 grad -= grad.min()
 
 grad /= grad.max()
@@ -100,31 +108,50 @@ data = unnorm(data.cpu()).numpy().squeeze() * 255
 
 out_list = [data, grad]
 
-if not os.path.isdir(img_folder):
-    os.mkdirs(img_folder)
+types = ['Original', 'Gradient']
 
-types = ['Original', 'Your Model']
-
-fig, axs = plt.subplots(nrows=len(out_list), ncols=len(te_dataset.samples),figsize = [24,7.5])
-
-for j, _type in enumerate(types):
-    axs[j, 0].set_ylabel(_type)
-    for i in range(len(te_dataset.samples)):
+#do for each image
+for j in range(len(te_dataset.samples)):
+    fig, axs = plt.subplots(1, ncols=len(out_list),figsize = [15,15])
+    #make gradient for each image
+    for i, _type in enumerate(types):
+        axs[i].set_ylabel(_type)
         #pred_list format: 1st array = true label; 2nd array = predicted label
-        axs[j, i].set_xlabel('%s' % label_dict[pred_list[j][i]]) 
-        img = out_list[j][i]
+        axs[i].set_xlabel('%s' % label_dict[pred_list[i][j]]) 
+        img = out_list[i][j]
         img = np.transpose(img, (1, 2, 0))
 
         img = img.astype(np.uint8)
-        #cv2.imwrite( '_'+str(i)+'_'+str(j)+'.jpg',img)
-        axs[j, i].imshow(img)
+        axs[i].imshow(img)
 
-        axs[j, i].get_xaxis().set_ticks([])
-        axs[j, i].get_yaxis().set_ticks([])
+        axs[i].get_xaxis().set_ticks([])
+        axs[i].get_yaxis().set_ticks([])
         fig.subplots_adjust(hspace=0.025, wspace=0.025)
         plt.tight_layout()
-        
-plt.savefig(os.path.join(img_folder, '_grad_%s.jpg' % args.affix))
+
+    plt.savefig(os.path.join(img_folder, 'pair_{}'.format(j+1)))
+    # Save the gradient as individual image
+    extent = axs[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    fig.savefig(os.path.join(img_folder,'gradient_{}'.format(j+1)), bbox_inches=extent)
+
+    #moving code
+    #DEFINE: True Negative = Real images classified as real
+    if (axs[0].xaxis.get_label_text()=='real' and axs[0].xaxis.get_label_text()==axs[1].xaxis.get_label_text()):
+        shutil.move(os.path.join(img_folder,'pair_{}.png'.format(j+1)),os.path.join(tn,'pair_{}.png'.format(j+1)))
+        shutil.move(os.path.join(img_folder,'gradient_{}.png'.format(j+1)),os.path.join(tn,'gradient_{}.png'.format(j+1)))
+    if (axs[0].xaxis.get_label_text()=='fake' and axs[0].xaxis.get_label_text()==axs[1].xaxis.get_label_text()):
+        shutil.move(os.path.join(img_folder,'pair_{}.png'.format(j+1)),os.path.join(tp,'pair_{}.png'.format(j+1)))
+        shutil.move(os.path.join(img_folder,'gradient_{}.png'.format(j+1)),os.path.join(tp,'gradient_{}.png'.format(j+1)))
+    #False Positive
+    if (axs[0].xaxis.get_label_text()=='real' and axs[0].xaxis.get_label_text()!=axs[1].xaxis.get_label_text()):
+        shutil.move(os.path.join(img_folder,'pair_{}.png'.format(j+1)),os.path.join(fp,'pair_{}.png'.format(j+1)))
+        shutil.move(os.path.join(img_folder,'gradient_{}.png'.format(j+1)),os.path.join(fp,'gradient_{}.png'.format(j+1)))
+    #False Negative
+    if (axs[0].xaxis.get_label_text()=='fake' and axs[0].xaxis.get_label_text()!=axs[1].xaxis.get_label_text()):
+        shutil.move(os.path.join(img_folder,'pair_{}.png'.format(j+1)),os.path.join(fn,'pair_{}.png'.format(j+1)))
+        shutil.move(os.path.join(img_folder,'gradient_{}.png'.format(j+1)),os.path.join(fn,'gradient_{}.png'.format(j+1)))
+    #CLEAR FIGURE FOR NEXT IMAGE
+    plt.clf()
 print('##done!')
 
 
