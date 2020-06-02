@@ -106,7 +106,7 @@ for data, label in te_loader:
     datalist.extend(data)
     gradlist.extend(grad)
 
-    print("batch no: {}".format(iteration),end='\r)
+    print("batch no: {}".format(iteration),end='\r')
 
 #orig labels are in 0th index; predicted labels are in 1st index
 pred_list.append(orig_labellist)
