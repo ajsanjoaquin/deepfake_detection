@@ -160,5 +160,6 @@ for j in range(len(te_dataset.samples)):
     plt.close()
 print('##done!')
 
-
+if __name__=="__main__":
+    main()
 
