@@ -161,5 +161,5 @@ for j in range(len(te_dataset.samples)):
 print('##done!')
 
 if __name__=="__main__":
-    main()
+    print('active')
 
