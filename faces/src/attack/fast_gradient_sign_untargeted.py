@@ -91,7 +91,7 @@ class FastGradientSignUntargeted():
 
         with torch.enable_grad():
             for _iter in range(self.max_iters):
-                outputs = self.model(x, _eval=True)
+                outputs = self.model(x)
 
                 loss = F.cross_entropy(outputs, labels, reduction=reduction4loss)
 

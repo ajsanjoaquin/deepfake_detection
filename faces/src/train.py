@@ -52,9 +52,9 @@ class Trainer():
                     # close point to the original data point. If in evaluation mode, 
                     # just start from the original data point.
                     adv_data = self.attack.perturb(data, label, 'mean', True)
-                    output = model(adv_data, _eval=False)
+                    output = model(adv_data)
                 else:
-                    output = model(data, _eval=False)
+                    output = model(data)
 
                 loss = F.cross_entropy(output, label)
                 #normalize loss
@@ -70,7 +70,7 @@ class Trainer():
                         adv_data = self.attack.perturb(data, label, 'mean', False)
 
                         with torch.no_grad():
-                            adv_output = model(adv_data, _eval=True)
+                            adv_output = model(adv_data)
                         pred = torch.max(adv_output, dim=1)[1]
                         # print(label)
                         # print(pred)
@@ -82,7 +82,7 @@ class Trainer():
 
                     else:
                         with torch.no_grad():
-                            stand_output = model(data, _eval=True)
+                            stand_output = model(data)
                         pred = torch.max(stand_output, dim=1)[1]
 
                         # print(pred)
@@ -121,14 +121,14 @@ class Trainer():
             if va_loader is not None:
                 model.eval()
                 t1 = time()
-                va_acc, va_adv_acc = self.test(model, va_loader, True, False)
+                va_acc, va_adv_acc = self.test(model, va_loader, False, False)
                 va_acc, va_adv_acc = va_acc * 100.0, va_adv_acc * 100.0
 
                 t2 = time()
                 logger.info('\n'+'='*20 +' evaluation at epoch: %d iteration: %d '%(epoch, _iter) \
                     +'='*20)
-                logger.info('test acc: %.3f %%, test adv acc: %.3f %%, spent: %.3f' % (
-                    va_acc, va_adv_acc, t2-t1))
+                logger.info('train acc: %.3f %%, validation acc: %.3f %%, spent: %.3f' % (
+                    std_acc, va_acc, t2-t1))
                 logger.info('='*28+' end of evaluation '+'='*28+'\n')
             if std_acc>best_acc:
                 best_acc=std_acc
@@ -150,7 +150,7 @@ class Trainer():
             for data, label in loader:
                 data, label = tensor2cuda(data), tensor2cuda(label)
 
-                output = model(data, _eval=True)
+                output = model(data)
 
                 pred = torch.max(output, dim=1)[1]
                 te_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy(), 'sum')
@@ -166,7 +166,7 @@ class Trainer():
                                                        'mean', 
                                                        False)
 
-                    adv_output = model(adv_data, _eval=True)
+                    adv_output = model(adv_data)
 
                     adv_pred = torch.max(adv_output, dim=1)[1]
                     adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy(), 'sum')
@@ -214,7 +214,7 @@ def main(args):
                     ])
         tr_dataset=tv.datasets.ImageFolder(args.data_root,transform=transform)
         #split 80% train, 20% val
-        train_set, val_set = torch.utils.data.random_split(tr_dataset,[(len(tr_dataset)*0.80),(len(tr_dataset)*0.20)])
+        train_set, val_set = torch.utils.data.random_split(tr_dataset,[round((len(tr_dataset)*0.80)),round((len(tr_dataset)*0.20))])
 
         tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4)
         te_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4)
