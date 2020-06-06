@@ -42,7 +42,6 @@ print('##acc:',checkpoint['acc'])
 gradlist=[]
 
 for data, label in tqdm(te_loader):
-    iteration+=1
     data, label = tensor2cuda(data), tensor2cuda(label)
 
     VBP = VanillaBackprop(model)
@@ -65,13 +64,11 @@ for data, label in tqdm(te_loader):
     gradlist.extend(grad)
 
 
-out_list = [gradlist]
-
 types = ['Original', 'Gradient']
 
 #do for each image
 for i in tqdm(range(len(te_dataset.samples))):
-    img = out_list[i]
+    img = gradlist[i]
     img = np.transpose(img, (1, 2, 0))
     img = img.astype(np.uint8)
 
@@ -80,7 +77,7 @@ for i in tqdm(range(len(te_dataset.samples))):
     ax.set_axis_off()
     fig.add_axes(ax)
     try:
-        axs[i].imshow(img)
+        ax.imshow(img)
         plt.savefig(os.path.join(img_folder, 'pair_{}'.format(i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
     except: 
         pass

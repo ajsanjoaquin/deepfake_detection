@@ -67,19 +67,6 @@ class Trainer():
                     t1 = time()
 
                     if adv_train:
-                        with torch.no_grad():
-                            stand_output = model(data, _eval=True)
-                        pred = torch.max(stand_output, dim=1)[1]
-
-                        # print(pred)
-                        std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
-
-                        pred = torch.max(output, dim=1)[1]
-                        # print(pred)
-                        adv_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
-
-                    else:
-                        
                         adv_data = self.attack.perturb(data, label, 'mean', False)
 
                         with torch.no_grad():
@@ -92,6 +79,19 @@ class Trainer():
                         pred = torch.max(output, dim=1)[1]
                         # print(pred)
                         std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
+
+                    else:
+                        with torch.no_grad():
+                            stand_output = model(data, _eval=True)
+                        pred = torch.max(stand_output, dim=1)[1]
+
+                        # print(pred)
+                        std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
+
+                        pred = torch.max(output, dim=1)[1]
+                        # print(pred)
+                        adv_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
+                        
 
                     t2 = time()
 
@@ -179,16 +179,13 @@ class Trainer():
 def main(args):
     device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    save_folder = '%s' % (args.dataset)
-
-    log_folder = os.path.join(args.log_root, save_folder)
-    model_folder = os.path.join(args.model_root, save_folder)
+    log_folder = args.log_root
 
     makedirs(log_folder)
-    makedirs(model_folder)
+    makedirs(args.model_folder)
 
     setattr(args, 'log_folder', log_folder)
-    setattr(args, 'model_folder', model_folder)
+    setattr(args, 'model_folder', args.model_folder)
 
     logger = create_logger(log_folder, args.todo, 'info')
 
