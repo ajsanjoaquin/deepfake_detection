@@ -29,7 +29,7 @@ for file in tqdm(os.listdir(tobe_filtered)):
     j+=1
     path=os.path.join(tobe_filtered,file)
     img=cv2.imread(path)
-    if img == type(None):
+    if type(img) == type(None):
       pass
     else:
       pixels = cv2.cvtColor(cv2.imread(path),cv2.COLOR_BGR2RGB)

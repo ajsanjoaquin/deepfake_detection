@@ -19,8 +19,12 @@ args=parser()
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #output location
 img_folder = args.output
-if not os.path.isdir(img_folder):
-    os.mkdir(img_folder)
+fake=os.path.join(img_folder,'fake')
+real=os.path.join(img_folder,'real')
+folders=[img_folder,fake,real]
+for folder in folders:
+    if not os.path.isdir(folder):
+        os.mkdir(folder)
 ################################################
 test_transform = transforms.Compose([transforms.Resize((299,299)),
           transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -40,6 +44,8 @@ model.load_state_dict(checkpoint['net'])
 print('##acc:',checkpoint['acc'])
 
 gradlist=[]
+labellist=[]
+label_dict = {0:'fake',1:'real'}
 
 for data, label in tqdm(te_loader):
     data, label = tensor2cuda(data), tensor2cuda(label)
@@ -60,11 +66,8 @@ for data, label in tqdm(te_loader):
     grad /= grad.max()
 
     grad = grad.cpu().numpy().squeeze() *255 # (N, 28, 28)
-
+    labellist.extend(label)
     gradlist.extend(grad)
-
-
-types = ['Original', 'Gradient']
 
 #do for each image
 for i in tqdm(range(len(te_dataset.samples))):
@@ -78,7 +81,10 @@ for i in tqdm(range(len(te_dataset.samples))):
     fig.add_axes(ax)
     try:
         ax.imshow(img)
-        plt.savefig(os.path.join(img_folder, 'pair_{}'.format(i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
+        if label_dict[labellist[i].item()]=='fake':
+            plt.savefig(os.path.join(fake, 'grad_{}'.format(i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
+        else:
+            plt.savefig(os.path.join(real, 'grad_{}'.format(i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
     except: 
         pass
     #CLEAR FIGURE FOR NEXT IMAGE

@@ -25,24 +25,23 @@ class Trainer():
     def adversarial_train(self, model, tr_loader, va_loader=None):
         self.train(model, tr_loader, va_loader, True)
 
-    def train(self, model, tr_loader, va_loader=None, adv_train=False):
+    def train(self, model, tr_loader, va_loader, adv_train=False):
         args = self.args
         logger = self.logger
         #child=model.children()[0]
         #for param in child.parameters():
         #param.requires_grad = False
-
+        criterion = nn.CrossEntropyLoss()
         opt = torch.optim.Adam(model.parameters(), args.learning_rate, weight_decay=args.weight_decay)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, 
                                                          milestones=[2, 4, 6, 7, 8], 
                                                          gamma=0.1)
-        _iter = 0
+        
 
         begin_time = time()
         best_acc = 0.0
-
+        logger.info("Train: %d, Validation: %d" % (len(tr_loader.dataset),len(va_loader.dataset)))
         for epoch in range(1, args.max_epoch+1):
-            scheduler.step()
             model.train()
             for data, label in tr_loader:
                 data, label = tensor2cuda(data), tensor2cuda(label)
@@ -56,52 +55,45 @@ class Trainer():
                 else:
                     output = model(data)
 
-                loss = F.cross_entropy(output, label)
                 #normalize loss
+                loss = criterion(output, label)
+                loss=loss/loss.detach()
 
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
+                
+                if adv_train:
+                    adv_data = self.attack.perturb(data, label, 'mean', False)
 
-                if _iter % args.n_eval_step == 0:
-                    t1 = time()
+                    with torch.no_grad():
+                        adv_output = model(adv_data)
+                    pred = torch.max(adv_output, dim=1)[1]
+                    # print(label)
+                    # print(pred)
+                    adv_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
 
-                    if adv_train:
-                        adv_data = self.attack.perturb(data, label, 'mean', False)
+                    pred = torch.max(output, dim=1)[1]
+                    # print(pred)
+                    std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
 
-                        with torch.no_grad():
-                            adv_output = model(adv_data)
-                        pred = torch.max(adv_output, dim=1)[1]
-                        # print(label)
-                        # print(pred)
-                        adv_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
+                else:
+                    with torch.no_grad():
+                        stand_output = model(data)
+                    pred = torch.max(stand_output, dim=1)[1]
 
-                        pred = torch.max(output, dim=1)[1]
-                        # print(pred)
-                        std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
+                    # print(pred)
+                    std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
 
-                    else:
-                        with torch.no_grad():
-                            stand_output = model(data)
-                        pred = torch.max(stand_output, dim=1)[1]
+                    pred = torch.max(output, dim=1)[1]
+                    # print(pred)
+                    adv_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
 
-                        # print(pred)
-                        std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
 
-                        pred = torch.max(output, dim=1)[1]
-                        # print(pred)
-                        adv_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
-                        
+                logger.info('epoch: %d, spent %.2f s, tr_loss: %.3f' % (
+                    epoch, time()-begin_time, loss.item()))
 
-                    t2 = time()
-
-                    print('%.3f' % (t2 - t1))
-
-                    logger.info('epoch: %d, iter: %d, spent %.2f s, tr_loss: %.3f' % (
-                        epoch, _iter, time()-begin_time, loss.item()))
-
-                    logger.info('standard acc: %.3f %%, robustness acc: %.3f %%' % (
-                        std_acc, adv_acc))
+                logger.info('standard acc: %.3f' % (std_acc))
 
                     # begin_time = time()
 
@@ -114,9 +106,9 @@ class Trainer():
                     #         va_acc, va_adv_acc, time() - begin_time))
                     #     logger.info('='*28 + ' end of evaluation ' + '='*28 + '\n')
 
-                    begin_time = time()
 
-                _iter += 1
+                begin_time = time()
+               
 
             if va_loader is not None:
                 model.eval()
@@ -125,7 +117,7 @@ class Trainer():
                 va_acc, va_adv_acc = va_acc * 100.0, va_adv_acc * 100.0
 
                 t2 = time()
-                logger.info('\n'+'='*20 +' evaluation at epoch: %d iteration: %d '%(epoch, _iter) \
+                logger.info('\n'+'='*20 +' evaluation at epoch: %d '%(epoch) \
                     +'='*20)
                 logger.info('train acc: %.3f %%, validation acc: %.3f %%, spent: %.3f' % (
                     std_acc, va_acc, t2-t1))
@@ -134,8 +126,9 @@ class Trainer():
                 best_acc=std_acc
                 file_name = os.path.join(args.model_folder, 'checkpoint_%d.pth' % epoch)
                 save_model(model, file_name)
-        
-        print('Best val Acc: {:4f}'.format(best_acc))
+            #for Pytorch 1.0, opt.step() must be called before scheduler.step()
+            scheduler.step()
+        print('Best Train Acc: {:4f}'.format(best_acc))
             
 
 
