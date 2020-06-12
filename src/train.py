@@ -185,7 +185,10 @@ def main(args):
     print_args(args, logger)
 
     model = myxception_(num_classes=2, pretrained='imagenet')
-    checkpoint = torch.load(args.load_checkpoint)
+    if device='cpu':
+        checkpoint = torch.load(args.load_checkpoint,map_location=torch.device('cpu'))
+    else:
+        checkpoint = torch.load(args.load_checkpoint)
     model.load_state_dict(checkpoint['net'])
 
     attack = FastGradientSignUntargeted(model, 
