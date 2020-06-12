@@ -10,12 +10,12 @@ import torch
 import pretrainedmodels
 import torch.nn as nn
 import torch.nn.functional as F
-from xception import xception
+from .xception import xception
 import math
 import torchvision
 
 
-def return_pytorch04_xception(pretrained=True):
+def return_pytorch04_xception(pretrained=False):
     # Raises warning "src not broadcastable to dst" but thats fine
     model = xception(pretrained=False)
     if pretrained:
