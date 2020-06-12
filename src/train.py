@@ -7,7 +7,8 @@ from torch.utils.data import DataLoader
 import torchvision as tv
 from torchvision import transforms
 from time import time
-from src.xception_2 import myxception_
+from models import model_selection
+#from src.xception_2 import myxception_
 from src.attack import FastGradientSignUntargeted
 from src.utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, save_model
 
@@ -183,13 +184,13 @@ def main(args):
     logger = create_logger(log_folder, args.todo, 'info')
 
     print_args(args, logger)
-
-    model = myxception_(num_classes=2, pretrained='imagenet')
+    model, *_ = model_selection(modelname='xception', num_out_classes=2)
+    #model = myxception_(num_classes=2, pretrained='imagenet')
     if device='cpu':
         checkpoint = torch.load(args.load_checkpoint,map_location=torch.device('cpu'))
     else:
         checkpoint = torch.load(args.load_checkpoint)
-    model.load_state_dict(checkpoint['net'])
+    model.load_state_dict(checkpoint)
 
     attack = FastGradientSignUntargeted(model, 
                                         args.epsilon, 
