@@ -4,7 +4,6 @@ def parser():
     parser = argparse.ArgumentParser(description='Video Summarization')
     parser.add_argument('--todo', choices=['train', 'valid', 'test', 'visualize'], default='train',
         help='what behavior want to do: train | valid | test | visualize')
-    parser.add_argument('--dataset', default='cifar-10', help='use what dataset')
     parser.add_argument('--data_root', default='/content/test', 
         help='the directory to save the dataset')
     parser.add_argument('--log_root', default='log', 
