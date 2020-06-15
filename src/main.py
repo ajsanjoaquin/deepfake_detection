@@ -142,6 +142,7 @@ class Trainer():
         with torch.no_grad():
             for data in loader:
                 images, labels = data
+                images, labels = tensor2cuda(images), tensor2cuda(labels)
                 outputs = model(images)
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
@@ -150,14 +151,14 @@ class Trainer():
                     # use predicted label as target label
                     with torch.enable_grad():
                         adv_data = self.attack.perturb(data, 
-                                                       pred if use_pseudo_label else label, 
+                                                       predicted if use_pseudo_label else labels, 
                                                        'mean', 
                                                        False)
 
                     adv_output = model(adv_data)
 
                     adv_pred = torch.max(adv_output, dim=1)[1]
-                    adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy(), 'sum')
+                    adv_acc = evaluate(adv_pred.cpu().numpy(), labels.cpu().numpy(), 'sum')
                     adv_correct += adv_acc
                 else:
                     adv_correct = -num
