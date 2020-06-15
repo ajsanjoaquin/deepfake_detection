@@ -135,7 +135,8 @@ class Trainer():
 
     def test(self, model, loader, adv_test=False, use_pseudo_label=False):
         # adv_test is False, return adv_acc as -1 
-        num = 0
+        logger = self.logger
+        logger.info("Test Set: %d" % len(loader.dataset))
         adv_correct = 0
         total = 0
         test_correct=0
@@ -161,9 +162,9 @@ class Trainer():
                     adv_acc = evaluate(adv_pred.cpu().numpy(), labels.cpu().numpy(), 'sum')
                     adv_correct += adv_acc
                 else:
-                    adv_correct = -num
+                    adv_correct = -total
 
-        return test_correct / total , adv_correct / num
+        return test_correct / total , adv_correct / total
 
 def main(args):
     device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
