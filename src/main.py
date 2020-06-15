@@ -135,23 +135,17 @@ class Trainer():
 
     def test(self, model, loader, adv_test=False, use_pseudo_label=False):
         # adv_test is False, return adv_acc as -1 
-
-        total_acc = 0.0
         num = 0
-        total_adv_acc = 0.0
-
+        adv_correct = 0
+        total = 0
+        test_correct=0
         with torch.no_grad():
-            for data, label in loader:
-                data, label = tensor2cuda(data), tensor2cuda(label)
-
-                output = model(data)
-
-                pred = torch.max(output, dim=1)[1]
-                te_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy(), 'sum')
-                
-                total_acc += te_acc
-                num += output.shape[0]
-
+            for data in loader:
+                images, labels = data
+                outputs = model(images)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                test_correct += (predicted == labels).sum().item()
                 if adv_test:
                     # use predicted label as target label
                     with torch.enable_grad():
@@ -164,11 +158,11 @@ class Trainer():
 
                     adv_pred = torch.max(adv_output, dim=1)[1]
                     adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy(), 'sum')
-                    total_adv_acc += adv_acc
+                    adv_correct += adv_acc
                 else:
-                    total_adv_acc = -num
+                    adv_correct = -num
 
-        return total_acc / num , total_adv_acc / num
+        return test_correct / total , adv_correct / num
 
 def main(args):
     device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
