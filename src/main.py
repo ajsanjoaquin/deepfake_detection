@@ -164,6 +164,8 @@ class Trainer():
                 else:
                     adv_correct = -total
 
+        with open('%d_out.txt'% args.affix, 'w') as f:
+            print('Standard Accuracy:'+(test_correct / total), 'Adversarial Accuracy:'+(adv_correct / total) ,file=f)
         return test_correct / total , adv_correct / total
 
 def main(args):
