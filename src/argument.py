@@ -15,6 +15,7 @@ def parser():
     parser.add_argument('--output', help='specify location of output')
 
     # parameters for generating adversarial examples
+    parser.add_argument('--adv',type=bool,default=False, help='select adversarial testing or training')
     parser.add_argument('--epsilon', '-e', type=float, default=0.0157, 
         help='maximum perturbation of adversaries (4/255=0.0157)')
     parser.add_argument('--alpha', '-a', type=float, default=0.00784, 
