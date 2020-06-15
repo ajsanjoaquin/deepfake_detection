@@ -204,11 +204,11 @@ def main(args):
         model.cuda()
 
     trainer = Trainer(args, logger, attack)
+    transform = transforms.Compose([transforms.Resize((299,299)),
+            transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+                ])
 
     if args.todo == 'train':
-        transform = transforms.Compose([transforms.Resize((299,299)),
-                transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-                    ])
         tr_dataset=tv.datasets.ImageFolder(args.data_root,transform=transform)
         #split 80% train, 20% val
         train_set, val_set = torch.utils.data.random_split(tr_dataset,[round((len(tr_dataset)*0.80)),round((len(tr_dataset)*0.20))])
