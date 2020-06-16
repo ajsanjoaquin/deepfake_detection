@@ -165,8 +165,8 @@ class Trainer():
                 else:
                     adv_correct = -total
 
-        with open('%d_out.txt'% args.affix, 'w') as f:
-            print('Standard Accuracy:'+(test_correct / total), 'Adversarial Accuracy:'+(adv_correct / total) ,file=f)
+        with open('%s_out.txt'% args.affix, 'w') as f:
+            print('Standard Accuracy: %.4f, Adversarial Accuracy: %.4f' % (test_correct / total,adv_correct / total) ,file=f)
         return test_correct / total , adv_correct / total
 
 def main(args):
@@ -209,8 +209,10 @@ def main(args):
 
     if args.todo == 'train':
         tr_dataset=tv.datasets.ImageFolder(args.data_root,transform=transform)
+        logger.info('Total: %d'%len(tr_dataset))
+        logger.info( "Classes: {}".format(' '.join(map(str, tr_dataset.classes))))
         #split 80% train, 20% val
-        train_set, val_set = torch.utils.data.random_split(tr_dataset,[round((len(tr_dataset)*0.80)),round((len(tr_dataset)*0.20))])
+        train_set, val_set = torch.utils.data.random_split(tr_dataset,[round(len(tr_dataset)*0.80),round(len(tr_dataset)*0.20)])
 
         tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4)
         te_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4)
