@@ -135,6 +135,7 @@ class Trainer():
 
     def test(self, model, loader, adv_test=False, use_pseudo_label=False):
         # adv_test is False, return adv_acc as -1 
+        model.eval()
         logger = self.logger
         logger.info("Test Set: %d" % len(loader.dataset))
         adv_correct = 0
