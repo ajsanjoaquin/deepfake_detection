@@ -12,7 +12,8 @@ from tqdm import tqdm
 from src.utils import makedirs, tensor2cuda
 from src.argument import parser
 from src.visualization import VanillaBackprop
-from src.xception_2 import myxception_
+from .models import model_selection
+#from src.xception_2 import myxception_
 from src.argument import parser
 
 args=parser()
@@ -34,7 +35,7 @@ te_dataset=tv.datasets.ImageFolder(args.data_root,transform=test_transform)
 te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
 #model instantiation
-model = myxception_(num_classes=2, pretrained='imagenet')
+model, *_ = model_selection(modelname='xception', num_out_classes=2)
 if device.type=='cpu':
   checkpoint = torch.load(args.load_checkpoint,map_location=torch.device('cpu'))
 else:
