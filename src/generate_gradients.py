@@ -41,8 +41,7 @@ if device.type=='cpu':
 else:
   checkpoint = torch.load(args.load_checkpoint)
   model.cuda()
-model.load_state_dict(checkpoint['net'])
-print('##acc:',checkpoint['acc'])
+model.load_state_dict(checkpoint)
 
 gradlist=[]
 labellist=[]
@@ -52,7 +51,7 @@ for data, label in tqdm(te_loader):
     data, label = tensor2cuda(data), tensor2cuda(label)
 
     VBP = VanillaBackprop(model)
-    grad = VBP.generate_gradients(data, label)
+    grad, model_output = VBP.generate_gradients(data, label)
     grad_flat = grad.view(grad.shape[0], -1)
     mean = grad_flat.mean(1, keepdim=True).unsqueeze(2).unsqueeze(3)
     std = grad_flat.std(1, keepdim=True).unsqueeze(2).unsqueeze(3)
@@ -60,13 +59,13 @@ for data, label in tqdm(te_loader):
     mean = mean.repeat(1, 1, data.shape[2], data.shape[3])
     std = std.repeat(1, 1, data.shape[2], data.shape[3])
 
-    grad = torch.max(torch.min(grad, mean+3*std), mean-3*std)
+    # 4 targets
+    #unnormalize
+    #grad = torch.max(torch.min(grad, mean+3*std), mean-3*std)
+    #grad -= grad.min()
+    #grad /= grad.max()
+    #grad = grad.cpu().numpy().squeeze() *255 # (N, 28, 28)
 
-    grad -= grad.min()
-
-    grad /= grad.max()
-
-    grad = grad.cpu().numpy().squeeze() *255 # (N, 28, 28)
     labellist.extend(label)
     gradlist.extend(grad)
 

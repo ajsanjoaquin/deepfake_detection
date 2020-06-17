@@ -76,7 +76,7 @@ with torch.no_grad():
                                         max_iters=args.k, 
                                         _type=perturbation_type)
 
-   #references of _eval=true must be removed
+    #references of _eval=true must be removed
     adv_data = attack.perturb(data, label, 'mean', False)
 
     output = model(adv_data)
