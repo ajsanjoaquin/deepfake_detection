@@ -75,7 +75,7 @@ for i in tqdm(range(len(te_dataset.samples))):
     img = np.transpose(img, (1, 2, 0))
     img = img.astype(np.uint8)
 
-    fig=plt.figure(figsize=[6.4, 4.8])
+    fig=plt.figure()
     ax = plt.Axes(fig, [0., 0., 1., 1.])
     ax.set_axis_off()
     fig.add_axes(ax)

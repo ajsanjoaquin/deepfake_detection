@@ -56,7 +56,7 @@ class Trainer():
                 loss = criterion(stand_output, label)
                 loss=loss/loss.detach()
 
-                if adv_train :
+                if adv_train and epoch >1:
                     #zero all grads
                     model.zero_grad()
 
