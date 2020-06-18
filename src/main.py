@@ -109,7 +109,7 @@ class Trainer():
             if va_loader is not None:
                 model.eval()
                 t1 = time()
-                va_acc, va_adv_acc = self.test(model, va_loader, False, False)
+                va_acc, va_adv_acc = self.test(model, va_loader, False, False, True)
                 va_acc, va_adv_acc = va_acc * 100.0, va_adv_acc * 100.0
 
                 t2 = time()
@@ -121,7 +121,6 @@ class Trainer():
                 if adv_train:
                     logger.info('Robustness_acc: %.3f %%' %(adv_acc))
 
-
                 logger.info('='*28+' end of evaluation '+'='*28+'\n')
 
             if std_acc > best_acc and va_acc >= best_va_acc:
@@ -131,15 +130,16 @@ class Trainer():
                 save_model(model, file_name)
             #for Pytorch 1.0, opt.step() must be called before scheduler.step()
             scheduler.step()
-        print('Best Train Acc: {:4f}'.format(best_acc))
+        print('Best Train Acc: {:4f}, Best Valid Acc: {:4f}'.format(best_acc, best_va_acc))
             
 
 
-    def test(self, model, loader, adv_test=False, use_pseudo_label=False):
+    def test(self, model, loader, adv_test=False, use_pseudo_label=False,valid=False):
         # adv_test is False, return adv_acc as -1 
         model.eval()
         logger = self.logger
-        logger.info("Test Set: %d" % len(loader.dataset))
+        if valid==False:
+            logger.info("Test Set: %d" % len(loader.dataset))
         adv_correct = 0
         total = 0
         test_correct=0
@@ -149,9 +149,11 @@ class Trainer():
                 data, labels = tensor2cuda(data), tensor2cuda(labels)
                 #forward
                 output = model(data)
-                pred = output.max(1, keepdim=True)[1]
+                _, pred = torch.max(output.data, 1)
+
                 total += labels.size(0)
-                test_correct += (pred.item() == labels.item()).sum().item()
+                test_correct += (pred == labels).sum().item()
+
                 if adv_test:
                     if pred.item() !=labels.item():
                         continue
