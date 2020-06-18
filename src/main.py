@@ -42,6 +42,8 @@ class Trainer():
 
         begin_time = time()
         best_acc = 0.0
+        best_va_acc = 0.0
+
         logger.info("Train: %d, Validation: %d" % (len(tr_loader.dataset),len(va_loader.dataset)))
         for epoch in range(1, args.max_epoch+1):
             model.train()
@@ -49,12 +51,12 @@ class Trainer():
                 data, label = tensor2cuda(data), tensor2cuda(label)
                 
                 opt.zero_grad()
-                output = model(data)
+                stand_output = model(data)
                 #normalize loss
-                loss = criterion(output, label)
+                loss = criterion(stand_output, label)
                 loss=loss/loss.detach()
 
-                if adv_train:
+                if adv_train :
                     #zero all grads
                     model.zero_grad()
 
@@ -73,31 +75,21 @@ class Trainer():
                 opt.step()
                 
                 if adv_train:
-                    pred = torch.max(adv_output, dim=1)[1]
+                    adv_pred = torch.max(adv_output, dim=1)[1]
                     # print(label)
                     # print(pred)
-                    adv_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
-
-                    pred = torch.max(output, dim=1)[1]
-                    # print(pred)
-                    std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
-
-                else:
-
-                    pred = torch.max(stand_output, dim=1)[1]
-
-                    # print(pred)
-                    std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
-
-                    pred = torch.max(output, dim=1)[1]
-                    # print(pred)
-                    adv_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
+                    adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy()) * 100
 
 
-                logger.info('epoch: %d, spent %.2f s, tr_loss: %.3f' % (
-                    epoch, time()-begin_time, loss.item()))
+                pred = torch.max(stand_output, dim=1)[1]
+                # print(pred)
+                std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
 
-                logger.info('standard acc: %.3f' % (std_acc))
+
+                #logger.info('epoch: %d, spent %.2f s, tr_loss: %.3f' % (
+                #   epoch, time()-begin_time, loss.item()))
+
+                #logger.info('standard acc: %.3f' % (std_acc))
 
                     # begin_time = time()
 
@@ -125,9 +117,16 @@ class Trainer():
                     +'='*20)
                 logger.info('train acc: %.3f %%, validation acc: %.3f %%, spent: %.3f' % (
                     std_acc, va_acc, t2-t1))
+
+                if adv_train:
+                    logger.info('Robustness_acc: %.3f %%' %(adv_acc))
+
+
                 logger.info('='*28+' end of evaluation '+'='*28+'\n')
-            if std_acc>best_acc:
+
+            if std_acc > best_acc and va_acc >= best_va_acc:
                 best_acc=std_acc
+                best_va_acc=va_acc
                 file_name = os.path.join(args.model_folder, 'checkpoint_%d.pth' % epoch)
                 save_model(model, file_name)
             #for Pytorch 1.0, opt.step() must be called before scheduler.step()
@@ -154,10 +153,10 @@ class Trainer():
                 total += labels.size(0)
                 test_correct += (pred.item() == labels.item()).sum().item()
                 if adv_test:
-                    if pred.item() !=label.item():
+                    if pred.item() !=labels.item():
                         continue
                     data.requires_grad = True
-                    loss= F.nll_loss(output,label)
+                    loss= F.nll_loss(output,labels)
 
                     #zero all grads
                     model.zero_grad()
@@ -203,14 +202,6 @@ def main(args):
     else:
         checkpoint = torch.load(args.load_checkpoint)
     model.load_state_dict(checkpoint)
-
-    attack = FastGradientSignUntargeted(model, 
-                                        args.epsilon, 
-                                        args.alpha, 
-                                        min_val=0, 
-                                        max_val=1, 
-                                        max_iters=args.k, 
-                                        _type=args.perturbation_type)
 
     if torch.cuda.is_available():
         model.cuda()
