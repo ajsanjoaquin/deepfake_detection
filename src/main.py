@@ -9,16 +9,16 @@ from torchvision import transforms
 from time import time
 from .models import model_selection
 #from src.xception_2 import myxception_
-from src.attack import FastGradientSignUntargeted
+from src.attack import fgsm_attack
 from src.utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, save_model
 
 from src.argument import parser, print_args
 
 class Trainer():
-    def __init__(self, args, logger, attack):
+    def __init__(self, args, logger):
         self.args = args
         self.logger = logger
-        self.attack = attack
+
 
     def standard_train(self, model, tr_loader, va_loader=None):
         self.train(model, tr_loader, va_loader, False)
@@ -27,6 +27,7 @@ class Trainer():
         self.train(model, tr_loader, va_loader, True)
 
     def train(self, model, tr_loader, va_loader, adv_train=False):
+        
         args = self.args
         logger = self.logger
         #child=model.children()[0]
@@ -46,29 +47,32 @@ class Trainer():
             model.train()
             for data, label in tr_loader:
                 data, label = tensor2cuda(data), tensor2cuda(label)
-
-                if adv_train:
-                    # When training, the adversarial example is created from a random 
-                    # close point to the original data point. If in evaluation mode, 
-                    # just start from the original data point.
-                    adv_data = self.attack.perturb(data, label, 'mean', True)
-                    output = model(adv_data)
-                else:
-                    output = model(data)
-
+                
+                opt.zero_grad()
+                output = model(data)
                 #normalize loss
                 loss = criterion(output, label)
                 loss=loss/loss.detach()
 
-                opt.zero_grad()
+                if adv_train:
+                    #zero all grads
+                    model.zero_grad()
+
+                    #get grads of model in backward pass
+                    loss.backward()
+                    #collect data grad
+                    data_grad=data.grad.data
+                    #FGSM
+                    adv_data=fgsm_attack(data,args.epsilon,data_grad)
+                    adv_output = model(adv_data)
+
+                    loss_adv=criterion(adv_output)
+                    loss=(loss+loss_adv)/2
+                
                 loss.backward()
                 opt.step()
                 
                 if adv_train:
-                    adv_data = self.attack.perturb(data, label, 'mean', False)
-
-                    with torch.no_grad():
-                        adv_output = model(adv_data)
                     pred = torch.max(adv_output, dim=1)[1]
                     # print(label)
                     # print(pred)
@@ -79,8 +83,7 @@ class Trainer():
                     std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
 
                 else:
-                    with torch.no_grad():
-                        stand_output = model(data)
+
                     pred = torch.max(stand_output, dim=1)[1]
 
                     # print(pred)
@@ -141,26 +144,36 @@ class Trainer():
         adv_correct = 0
         total = 0
         test_correct=0
+        
         with torch.no_grad():
-            for data in loader:
-                images, labels = data
-                images, labels = tensor2cuda(images), tensor2cuda(labels)
-                outputs = model(images)
-                _, predicted = torch.max(outputs.data, 1)
+            for data,labels in loader:
+                data, labels = tensor2cuda(data), tensor2cuda(labels)
+                #forward
+                output = model(data)
+                pred = output.max(1, keepdim=True)[1]
                 total += labels.size(0)
-                test_correct += (predicted == labels).sum().item()
+                test_correct += (pred.item() == labels.item()).sum().item()
                 if adv_test:
-                    # use predicted label as target label
-                    with torch.enable_grad():
-                        adv_data = self.attack.perturb(data, 
-                                                       predicted if use_pseudo_label else labels, 
-                                                       'mean', 
-                                                       False)
+                    if pred.item() !=label.item():
+                        continue
+                    data.requires_grad = True
+                    loss= F.nll_loss(output,label)
 
-                    adv_output = model(adv_data)
+                    #zero all grads
+                    model.zero_grad()
 
-                    adv_pred = torch.max(adv_output, dim=1)[1]
-                    adv_acc = evaluate(adv_pred.cpu().numpy(), labels.cpu().numpy(), 'sum')
+                    #get grads of model in backward pass
+                    loss.backward()
+                    #collect data grad
+                    data_grad=data.grad.data
+                    #FGSM
+                    adv_data=fgsm_attack(data,args.epsilon,data_grad)
+
+                    # Re-classify the perturbed image
+                    adv_out = model(adv_data)
+                    adv_pred = adv_pred.max(1, keepdim=True)[1]
+
+                    adv_acc = evaluate(adv_pred.detach().cpu().numpy(), labels.cpu().numpy(), 'sum')
                     adv_correct += adv_acc
                 else:
                     adv_correct = -total
@@ -185,7 +198,7 @@ def main(args):
     print_args(args, logger)
     model, *_ = model_selection(modelname='xception', num_out_classes=2)
     #model = myxception_(num_classes=2, pretrained='imagenet')
-    if device=='cpu':
+    if device.type=='cpu':
         checkpoint = torch.load(args.load_checkpoint,map_location=torch.device('cpu'))
     else:
         checkpoint = torch.load(args.load_checkpoint)
@@ -202,7 +215,7 @@ def main(args):
     if torch.cuda.is_available():
         model.cuda()
 
-    trainer = Trainer(args, logger, attack)
+    trainer = Trainer(args, logger)
     transform = transforms.Compose([transforms.Resize((299,299)),
             transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
                 ])

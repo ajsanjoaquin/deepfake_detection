@@ -3,28 +3,26 @@ import torchvision as tv
 import numpy as np
 import os
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 import sys
 from torchvision import transforms
 import matplotlib.pyplot as plt 
 import cv2
 
-from src.attack import FastGradientSignUntargeted
+from src.attack import fgsm_attack
 from src.utils import makedirs, tensor2cuda
 from src.argument import parser
 from src.xception_2 import myxception_
 
 
 args=parser()
-img_folder = '/content/outputs'
-torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+img_folder = args.output
+device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ################################################
-max_epsilon = 4.7
+epsilon=args.epsilon
 perturbation_type = 'l2'
 label_dict = {0:'fake',1:'real'}
 
-test_transform = transforms.Compose([transforms.Resize((299,299)),
-          transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-              ])
 class UnNormalize(object):
     def __init__(self, mean, std):
         self.mean = mean
@@ -44,48 +42,71 @@ class UnNormalize(object):
               # The normalize code -> t.sub_(m).div_(s)
         return tensor
 
+
+
+test_transform = transforms.Compose([transforms.Resize((299,299)),
+          transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+              ])
+
 unnorm=UnNormalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 
 te_dataset=tv.datasets.ImageFolder(args.data_root,transform=test_transform)
 te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
-
-for data, label in te_loader:
-
-    data, label = tensor2cuda(data), tensor2cuda(label)
-
-
-    break
-
 adv_list = []
 pred_list = []
 
 #model instantiation
-with torch.no_grad():
-    model = myxception_(num_classes=2, pretrained='imagenet')
-    checkpoint=torch.load(args.load_checkpoint)
-    print('##acc:',checkpoint['acc'])
-    model.load_state_dict(checkpoint['net'])
-    model.cuda()
+model, *_ = model_selection(modelname='xception', num_out_classes=2)
+if device.type=='cpu':
+    checkpoint = torch.load(args.load_checkpoint,map_location=torch.device('cpu'))
+else:
+    checkpoint = torch.load(args.load_checkpoint)
+model.load_state_dict(checkpoint)
+model.eval()
 
-    attack = FastGradientSignUntargeted(model, 
-                                        max_epsilon, 
-                                        args.alpha, 
-                                        min_val=0, 
-                                        max_val=1, 
-                                        max_iters=args.k, 
-                                        _type=perturbation_type)
+for data, label in te_loader:
+    data, label = tensor2cuda(data), tensor2cuda(label)
 
-    #references of _eval=true must be removed
-    adv_data = attack.perturb(data, label, 'mean', False)
+    # Set requires_grad attribute of tensor. Important for Attack
+    data.requires_grad = True
 
-    output = model(adv_data)
-    pred = torch.max(output, dim=1)[1]
-    adv_list.append(adv_data.cpu().numpy().squeeze() * 255.0)  # (N, 28, 28)
-    pred_list.append(pred.cpu().numpy())
+    #forward
+    output = model(data)
+    pred = output.max(1, keepdim=True)[1] #index of max log-probability
+
+    if pred.item()!=label.item():
+        continue
+
+    loss= F.nll_loss(output,label)
+
+    #zero all grads
+    model.zero_grad()
+
+    #get grads of model in backward pass
+    loss.backward()
+
+    #collect data grad
+    data_grad=data.grad.data
+
+    #FGSM
+    adv_data=fgsm_attack(data,epsilon,data_grad)
+
+    # Re-classify the perturbed image
+    adv_pred = model(adv_data)
+
+    final_pred = adv_pred.max(1, keepdim=True)[1] # get predicted label of adversarial data
+    if final_pred.item() == label.item():
+        correct += 1
+#accuracy
+final_acc = correct/float(len(te_loader))
+print("Epsilon: {}\tTest Accuracy = {} / {} = {}".format(epsilon, correct, len(te_loader), final_acc))
+
+adv_list.append(adv_data.detach().cpu().numpy().squeeze() * 255.0)  # (N, 28, 28)
+pred_list.append(final_pred.cpu().numpy())
 
 
-data = unnorm(data.cpu()).squeeze().numpy() *255# (N, 28, 28)
+data = unnorm(data.detach().cpu()).squeeze().numpy() *255# (N, 28, 28)
 label = label.cpu().numpy()
 
 adv_list.insert(0, data)
@@ -116,5 +137,5 @@ for j, _type in enumerate(types):
         axs[j, i].get_yaxis().set_ticks([])
 
 plt.tight_layout()
-plt.savefig(os.path.join(img_folder, 'attack_%s_%s.jpg' % (perturbation_type,args.affix)))
+plt.savefig(os.path.join(img_folder, 'attack(epsilon: %s)_.jpg' % (args.epsilon)))
 print('##done!')
