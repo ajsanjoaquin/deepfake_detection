@@ -34,7 +34,7 @@ class Trainer():
         #for param in child.parameters():
         #param.requires_grad = False
         criterion = nn.CrossEntropyLoss()
-        opt = torch.optim.Adam(model.parameters(), args.learning_rate, weight_decay=args.weight_decay)
+        opt = torch.optim.Adam(model.parameters(), args.learning_rate, betas=(0.9,0.999), eps=1e-08, weight_decay=args.weight_decay)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, 
                                                          milestones=[2, 4, 6, 7, 8], 
                                                          gamma=0.1)
