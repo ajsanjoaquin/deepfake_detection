@@ -13,7 +13,6 @@ from src.utils import makedirs, tensor2cuda
 from src.argument import parser
 from src.visualization import VanillaBackprop
 from .models import model_selection
-#from src.xception_2 import myxception_
 from src.argument import parser
 
 args=parser()
@@ -59,12 +58,12 @@ for data, label in tqdm(te_loader):
     mean = mean.repeat(1, 1, data.shape[2], data.shape[3])
     std = std.repeat(1, 1, data.shape[2], data.shape[3])
 
-    # 4 targets
-    #unnormalize
-    #grad = torch.max(torch.min(grad, mean+3*std), mean-3*std)
-    #grad -= grad.min()
-    #grad /= grad.max()
-    #grad = grad.cpu().numpy().squeeze() *255 # (N, 28, 28)
+
+
+    grad = torch.max(torch.min(grad, mean+3*std), mean-3*std)
+    grad -= grad.min()
+    grad /= grad.max()
+    grad = grad.cpu().numpy().squeeze() *255 # (N, 28, 28)
 
     labellist.extend(label)
     gradlist.extend(grad)
