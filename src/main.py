@@ -9,7 +9,7 @@ from torchvision import transforms
 from time import time
 from .models import model_selection
 #from src.xception_2 import myxception_
-from src.attack import fgsm_attack
+from src.attack import adv_attack
 from src.utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, save_model
 
 from src.argument import parser, print_args
@@ -38,11 +38,8 @@ class Trainer():
         scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, 
                                                          milestones=[2, 4, 6, 7, 8], 
                                                          gamma=0.1)
-        
-
-        begin_time = time()
-        best_acc = 0.0
-        best_va_acc = 0.0
+        acc = 0.0
+        valid_acc = 0.0
 
         logger.info("Train: %d, Validation: %d" % (len(tr_loader.dataset),len(va_loader.dataset)))
         for epoch in range(1, args.max_epoch+1):
@@ -51,81 +48,58 @@ class Trainer():
                 data, label = tensor2cuda(data), tensor2cuda(label)
                 
                 opt.zero_grad()
-                stand_output = model(data)
+                output = model(data)
+                if adv_train:
+                    output = adv_attack (data, label, model, args.epsilon)
+
                 #normalize loss
-                loss = criterion(stand_output, label)
-                loss=loss/loss.detach()
+                loss = criterion(output, label)
+                #loss=loss/loss.detach()
 
-                if adv_train and epoch >1:
-                    #zero all grads
-                    model.zero_grad()
-
-                    #get grads of model in backward pass
-                    loss.backward()
-                    #collect data grad
-                    data_grad=data.grad.data
-                    #FGSM
-                    adv_data=fgsm_attack(data,args.epsilon,data_grad)
-                    adv_output = model(adv_data)
-
-                    loss_adv=criterion(adv_output)
-                    loss=(loss+loss_adv)/2
                 
                 loss.backward()
                 opt.step()
                 
                 if adv_train:
-                    adv_pred = torch.max(adv_output, dim=1)[1]
-                    # print(label)
-                    # print(pred)
+                    _, adv_pred = torch.max(output.data, dim=1)
+                    correct += (adv_pred == label).sum()
+                    total += label.size(0)
+
                     adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy()) * 100
+                    std_acc = -1
 
 
-                pred = torch.max(stand_output, dim=1)[1]
-                # print(pred)
-                std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
-
-
-                #logger.info('epoch: %d, spent %.2f s, tr_loss: %.3f' % (
-                #   epoch, time()-begin_time, loss.item()))
-
-                #logger.info('standard acc: %.3f' % (std_acc))
-
-                    # begin_time = time()
-
-                    # if va_loader is not None:
-                    #     va_acc, va_adv_acc = self.test(model, va_loader, True)
-                    #     va_acc, va_adv_acc = va_acc * 100.0, va_adv_acc * 100.0
-
-                    #     logger.info('\n' + '='*30 + ' evaluation ' + '='*30)
-                    #     logger.info('test acc: %.3f %%, test adv acc: %.3f %%, spent: %.3f' % (
-                    #         va_acc, va_adv_acc, time() - begin_time))
-                    #     logger.info('='*28 + ' end of evaluation ' + '='*28 + '\n')
-
-
-                begin_time = time()
-               
+                else:
+                    _, pred = torch.max(output.data, dim=1)
+                    correct += (pred == label).sum()
+                    total += label.size(0)
+                    std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
 
             if va_loader is not None:
                 model.eval()
                 t1 = time()
-                va_acc, va_adv_acc = self.test(model, va_loader, False, False, True)
+                va_acc, va_adv_acc = self.test(model, va_loader, False, True)
                 va_acc, va_adv_acc = va_acc * 100.0, va_adv_acc * 100.0
 
                 t2 = time()
                 logger.info('\n'+'='*20 +' evaluation at epoch: %d '%(epoch) \
                     +'='*20)
-                logger.info('train acc: %.3f %%, validation acc: %.3f %%, spent: %.3f' % (
+                if adv_train: logger.info('robust acc: %.3f %%, robust validation acc: %.3f %%, spent: %.3f' % (
+                    adv_acc, va_adv_acc, t2-t1))
+                else: logger.info('train acc: %.3f %%, validation acc: %.3f %%, spent: %.3f' % (
                     std_acc, va_acc, t2-t1))
-
-                if adv_train:
-                    logger.info('Robustness_acc: %.3f %%' %(adv_acc))
-
                 logger.info('='*28+' end of evaluation '+'='*28+'\n')
 
-            if std_acc > best_acc and va_acc >= best_va_acc:
-                best_acc=std_acc
-                best_va_acc=va_acc
+            if adv_train:
+                acc = adv_acc
+                valid_acc = va_adv_acc
+            else:
+                acc = std_acc
+                valid_acc = va_acc
+
+            if acc >= best_acc and valid_acc >= best_va_acc:
+                best_acc=acc
+                best_va_acc=valid_acc
                 file_name = os.path.join(args.model_folder, 'checkpoint_%d.pth' % epoch)
                 save_model(model, file_name)
             #for Pytorch 1.0, opt.step() must be called before scheduler.step()
@@ -134,7 +108,7 @@ class Trainer():
             
 
 
-    def test(self, model, loader, adv_test=False, use_pseudo_label=False,valid=False):
+    def test(self, model, loader, adv_test=False,valid=False):
         # adv_test is False, return adv_acc as -1 
         model.eval()
         logger = self.logger
@@ -157,31 +131,20 @@ class Trainer():
                 if adv_test:
                     if pred.item() !=labels.item():
                         continue
-                    data.requires_grad = True
-                    loss= F.nll_loss(output,labels)
-
-                    #zero all grads
-                    model.zero_grad()
-
-                    #get grads of model in backward pass
-                    loss.backward()
-                    #collect data grad
-                    data_grad=data.grad.data
-                    #FGSM
-                    adv_data=fgsm_attack(data,args.epsilon,data_grad)
 
                     # Re-classify the perturbed image
-                    adv_out = model(adv_data)
-                    adv_pred = adv_pred.max(1, keepdim=True)[1]
+                    adv_out = adv_attack (data, labels, model, args.epsilon)
+                    _, adv_pred = torch.max(adv_out.data , dim=1)
 
-                    adv_acc = evaluate(adv_pred.detach().cpu().numpy(), labels.cpu().numpy(), 'sum')
-                    adv_correct += adv_acc
+                    total += labels.size(0)
+                    adv_correct += (adv_pred == labels).sum().item()
                 else:
                     adv_correct = -total
+                    
 
         with open('%s_out.txt'% args.affix, 'w') as f:
-            print('Standard Accuracy: %.4f, Adversarial Accuracy: %.4f' % (test_correct / total,adv_correct / total) ,file=f)
-        return test_correct / total , adv_correct / total
+            print('Standard Accuracy: %.4f, Adversarial Accuracy: %.4f' % (test_correct / total, adv_correct / total) ,file=f)
+        return test_correct/total , adv_correct / total
 
 def main(args):
     device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -227,7 +190,7 @@ def main(args):
     elif args.todo == 'test':
         te_dataset=tv.datasets.ImageFolder(args.data_root,transform=transform)
         te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
-        std_acc, adv_acc = trainer.test(model, te_loader, adv_test=args.adv, use_pseudo_label=False)
+        std_acc, adv_acc = trainer.test(model, te_loader, adv_test=args.adv)
         print("std acc: %.4f, adv_acc: %.4f" % (std_acc * 100, adv_acc * 100))
 
     else:

@@ -1,7 +1,5 @@
 """
-this code is modified from https://github.com/utkuozbulak/pytorch-cnn-adversarial-attacks
-
-original author: Utku Ozbulak - github.com/utkuozbulak
+this code is modified from https://pytorch.org/tutorials/beginner/fgsm_tutorial.html
 """
 import sys
 sys.path.append("..")
@@ -10,7 +8,7 @@ import os
 import numpy as np
 
 import torch
-from torch import nn
+import torch.nn.functional as F
 
 from src.utils import tensor2cuda
 
@@ -25,4 +23,21 @@ def fgsm_attack(image, epsilon, data_grad):
     perturbed_image = torch.clamp(perturbed_image, 0, 1)
     # Return the perturbed image
     return perturbed_image
-    
+
+def adv_attack(data, label, model, epsilon):
+    data=data.clone()
+    data.requires_grad = True
+    #zero all grads
+    model.zero_grad()
+
+    output = model(data)
+
+    loss = F.CrossEntropyLoss(output, label)
+    #get grads of model in backward pass
+    loss.backward()
+    #collect data grad
+    data_grad=data.grad.data
+    #FGSM
+    adv_data=fgsm_attack(data, epsilon, data_grad)
+    return model(adv_data)
+

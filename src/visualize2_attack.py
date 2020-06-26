@@ -12,7 +12,7 @@ import cv2
 from src.attack import fgsm_attack
 from src.utils import makedirs, tensor2cuda
 from src.argument import parser
-from src.xception_2 import myxception_
+from .models import model_selection
 
 
 args=parser()
