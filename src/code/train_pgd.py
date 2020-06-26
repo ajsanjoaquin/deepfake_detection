@@ -127,7 +127,7 @@ def main():
     test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch,
                              num_workers=args.workers, pin_memory=pin_memory)
 
-    if args.pretrained_model == 'custom':
+    if args.pretrained_model == 'xception':
         model, *_ = model_selection(modelname='xception', num_out_classes=2)
         checkpoint = torch.load(args.load_checkpoint)
         model.load_state_dict(checkpoint)
