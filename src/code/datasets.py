@@ -9,7 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets
 from torchvision.datasets.utils import check_integrity
 from typing import *
-from zipdata import ZipData
+from .zipdata import ZipData
 
 # set this environment variable to the location of your imagenet directory if you want to read ImageNet data.
 # make sure your val directory is preprocessed to look like the train directory, e.g. by running this script
@@ -39,13 +39,14 @@ def get_dataset(dataset: str, split: str, train= None, test= None) -> Dataset:
         return _cifar10(split)
     elif dataset == "FaceForensics":
         if split == 'train':
-            datasets.ImageFolder(train,transform=transforms.Compose([transforms.Resize((299,299)),
-            transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+            return datasets.ImageFolder(train,transform=transforms.Compose([transforms.Resize((299,299)),
+            transforms.ToTensor()
                 ]))
-        elif split == 'test':
-            datasets.ImageFolder(test,transform=transforms.Compose([transforms.Resize((299,299)),
-            transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        if split == 'test':
+            return datasets.ImageFolder(test,transform=transforms.Compose([transforms.Resize((299,299)),
+            transforms.ToTensor()
                 ]))
+        else: print('NONE')
 
 
 

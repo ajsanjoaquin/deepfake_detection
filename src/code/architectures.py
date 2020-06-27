@@ -1,12 +1,12 @@
-from archs.cifar_resnet import resnet as resnet_cifar
-from datasets import get_normalize_layer, get_input_center_layer
+from .archs.cifar_resnet import resnet as resnet_cifar
+from .datasets import get_normalize_layer, get_input_center_layer
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from torch.nn.functional import interpolate
 from torchvision.models.resnet import resnet50
-
-from ..models import model_selection
+#must run from root (deepfake_detection)
+from src.models import model_selection
 
 
 # resnet50 - the classic ResNet-50, sized for ImageNet
@@ -32,7 +32,8 @@ def get_architecture(arch: str, dataset: str) -> torch.nn.Module:
     elif arch == "imagenet32_resnet110":
         model = resnet_cifar(depth=110, num_classes=1000).cuda()
     elif arch == "xception":
-        model, *_ = model_selection(modelname='xception', num_out_classes=2).cuda()
+        model, *_ = model_selection(modelname='xception', num_out_classes=2)
+        model.cuda()
 
     # Both layers work fine, We tried both, and they both
     # give very similar results 

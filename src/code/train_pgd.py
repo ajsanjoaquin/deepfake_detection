@@ -10,9 +10,9 @@ import time
 
 
 from IPython import embed
-from architectures import ARCHITECTURES, get_architecture
-from attacks import Attacker, PGD_L2, DDN
-from datasets import get_dataset, DATASETS, get_num_classes,\
+from .architectures import ARCHITECTURES, get_architecture
+from .attacks import Attacker, PGD_L2, DDN
+from .datasets import get_dataset, DATASETS, get_num_classes,\
                      MultiDatasetsDataLoader, TiTop50KDataset
 import numpy as np
 import torch
@@ -24,9 +24,9 @@ from torch.optim import SGD, Optimizer
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
-from train_utils import AverageMeter, accuracy, init_logfile, log, copy_code, requires_grad_
+from .train_utils import AverageMeter, accuracy, init_logfile, log, copy_code, requires_grad_
 
-from ..models import model_selection
+
 
 LABELLED = 0
 PSEUDO_LABELLED = 1
@@ -113,11 +113,11 @@ def main():
     # Copies files to the outdir to store complete script with each experiment
     copy_code(args.outdir)
 
-    train_dataset = get_dataset(args.dataset, 'train', args.data_root)
-    test_dataset = get_dataset(args.dataset, 'test', args.test_root)
+    train_dataset = get_dataset(args.dataset, 'train', args.data_root, None)
+    test_dataset = get_dataset(args.dataset, 'test', None, args.test_root)
     pin_memory = (args.dataset == "imagenet")
     labelled_loader = DataLoader(train_dataset, shuffle=True, batch_size=args.batch,
-                      num_workers=args.workers, pin_memory=pin_memory)
+                      num_workers=args.workers, pin_memory=pin_memory, drop_last= True)
     if args.use_unlabelled:
         pseudo_labelled_loader = DataLoader(TiTop50KDataset(), shuffle=True, batch_size=args.batch,
                                   num_workers=args.workers, pin_memory=pin_memory)
@@ -158,6 +158,7 @@ def main():
 
     starting_epoch = 0
     logfilename = os.path.join(args.outdir, 'log.txt')
+    print(len(train_dataset.classes))
 
     # Load latest checkpoint if exists (to handle philly failures) 
     model_path = os.path.join(args.outdir, 'checkpoint.pth.tar')
@@ -241,6 +242,8 @@ def train(loader: DataLoader, model: torch.nn.Module, criterion, optimizer: Opti
         for inputs, targets in mini_batches:
             inputs = inputs.cuda()
             targets = targets.cuda()
+            print(inputs.shape)
+            print(batch[0].shape)
 
             inputs = inputs.repeat((1, args.num_noise_vec, 1, 1)).view(batch[0].shape)
 
@@ -265,7 +268,7 @@ def train(loader: DataLoader, model: torch.nn.Module, criterion, optimizer: Opti
                 outputs = model(noisy_inputs)
                 loss = criterion(outputs, targets)
 
-                acc1, acc5 = accuracy(outputs, targets, topk=(1, 5))
+                acc1, acc5 = accuracy(outputs, targets, topk=(1, 2))
                 losses.update(loss.item(), noisy_inputs.size(0))
                 top1.update(acc1.item(), noisy_inputs.size(0))
                 top5.update(acc5.item(), noisy_inputs.size(0))
@@ -292,7 +295,7 @@ def train(loader: DataLoader, model: torch.nn.Module, criterion, optimizer: Opti
             loss = criterion(outputs, targets)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(outputs, targets, topk=(1, 5))
+            acc1, acc5 = accuracy(outputs, targets, topk=(1, 2))
             losses.update(loss.item(), noisy_inputs.size(0))
             top1.update(acc1.item(), noisy_inputs.size(0))
             top5.update(acc5.item(), noisy_inputs.size(0))
@@ -350,7 +353,7 @@ def test(loader: DataLoader, model: torch.nn.Module, criterion, noise_sd: float,
             # compute output
             if args.adv_training:
                 normal_outputs = model(noisy_inputs)
-                acc1_normal, _ = accuracy(normal_outputs, targets, topk=(1, 5))
+                acc1_normal, _ = accuracy(normal_outputs, targets, topk=(1, 2))
                 top1_normal.update(acc1_normal.item(), inputs.size(0))
 
                 with torch.enable_grad():
@@ -362,7 +365,7 @@ def test(loader: DataLoader, model: torch.nn.Module, criterion, noise_sd: float,
             loss = criterion(outputs, targets)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(outputs, targets, topk=(1, 5))
+            acc1, acc5 = accuracy(outputs, targets, topk=(1, 2))
             losses.update(loss.item(), inputs.size(0))
             top1.update(acc1.item(), inputs.size(0))
             top5.update(acc5.item(), inputs.size(0))
