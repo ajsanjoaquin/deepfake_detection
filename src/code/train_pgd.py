@@ -128,9 +128,9 @@ def main():
                              num_workers=args.workers, pin_memory=pin_memory)
 
     if args.pretrained_model == 'xception':
-        model, *_ = model_selection(modelname='xception', num_out_classes=2)
+        model = get_architecture("xception", args.dataset)
         checkpoint = torch.load(args.load_checkpoint)
-        model.load_state_dict(checkpoint)
+        model.load_state_dict(checkpoint, strict=False)
         
     elif args.pretrained_model != '':
         assert args.arch == 'cifar_resnet110', 'Unsupported architecture for pretraining'

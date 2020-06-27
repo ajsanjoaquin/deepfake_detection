@@ -6,11 +6,14 @@ import torch.nn as nn
 from torch.nn.functional import interpolate
 from torchvision.models.resnet import resnet50
 
+from ..models import model_selection
+
 
 # resnet50 - the classic ResNet-50, sized for ImageNet
 # cifar_resnet20 - a 20-layer residual network sized for CIFAR
 # cifar_resnet110 - a 110-layer residual network sized for CIFAR
-ARCHITECTURES = ["resnet50", "cifar_resnet110", "imagenet32_resnet110"]
+# xception_net - for FaceForensics
+ARCHITECTURES = ["resnet50", "cifar_resnet110", "imagenet32_resnet110", "xception"]
 
 def get_architecture(arch: str, dataset: str) -> torch.nn.Module:
     """ Return a neural network (with random weights)
@@ -28,6 +31,8 @@ def get_architecture(arch: str, dataset: str) -> torch.nn.Module:
         model = resnet_cifar(depth=110, num_classes=10).cuda()
     elif arch == "imagenet32_resnet110":
         model = resnet_cifar(depth=110, num_classes=1000).cuda()
+    elif arch == "xception":
+        model, *_ = model_selection(modelname='xception', num_out_classes=2).cuda()
 
     # Both layers work fine, We tried both, and they both
     # give very similar results 

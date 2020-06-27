@@ -25,7 +25,7 @@ IMAGENET_LOC_ENV = "IMAGENET_DIR"
 IMAGENET_ON_PHILLY_DIR = "/hdfs/public/imagenet/2012/"
 
 # list of all datasets
-DATASETS = ["imagenet", "imagenet32", "cifar10"]
+DATASETS = ["imagenet", "imagenet32", "cifar10" , "FaceForensics"]
 
 
 def get_dataset(dataset: str, split: str) -> Dataset:
@@ -41,7 +41,7 @@ def get_dataset(dataset: str, split: str) -> Dataset:
     
     elif dataset == "cifar10":
         return _cifar10(split)
-    elif dataset == "FF++":
+    elif dataset == "FaceForensics":
         if split == 'train':
             datasets.ImageFolder(args.data_root,transform=transforms.Compose([transforms.Resize((299,299)),
             transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -59,6 +59,8 @@ def get_num_classes(dataset: str):
         return 1000
     elif dataset == "cifar10":
         return 10
+    elif dataset == "FaceForesnics":
+        return 2
 
 
 def get_normalize_layer(dataset: str) -> torch.nn.Module:
