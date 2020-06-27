@@ -10,13 +10,6 @@ from torchvision import transforms, datasets
 from torchvision.datasets.utils import check_integrity
 from typing import *
 from zipdata import ZipData
-import argparse
-
-parser = argparse.ArgumentParser(description='Datasets for Adv. Training')
-parser.add_argument('--data_root', type=str, default='train')
-parser.add_argument('--test_root', type=str, default='test')
-args = parser.parse_args()
-
 
 # set this environment variable to the location of your imagenet directory if you want to read ImageNet data.
 # make sure your val directory is preprocessed to look like the train directory, e.g. by running this script
@@ -28,8 +21,11 @@ IMAGENET_ON_PHILLY_DIR = "/hdfs/public/imagenet/2012/"
 DATASETS = ["imagenet", "imagenet32", "cifar10" , "FaceForensics"]
 
 
-def get_dataset(dataset: str, split: str) -> Dataset:
-    """Return the dataset as a PyTorch Dataset object"""
+def get_dataset(dataset: str, split: str, train= None, test= None) -> Dataset:
+    """Return the dataset as a PyTorch Dataset object
+    train: for xception only
+    test: for xception only
+    """
     if dataset == "imagenet":
         if "PT_DATA_DIR" in os.environ: #running on Philly
             return _imagenet_on_philly(split)
@@ -43,11 +39,11 @@ def get_dataset(dataset: str, split: str) -> Dataset:
         return _cifar10(split)
     elif dataset == "FaceForensics":
         if split == 'train':
-            datasets.ImageFolder(args.data_root,transform=transforms.Compose([transforms.Resize((299,299)),
+            datasets.ImageFolder(train,transform=transforms.Compose([transforms.Resize((299,299)),
             transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
                 ]))
         elif split == 'test':
-            datasets.ImageFolder(args.test_root,transform=transforms.Compose([transforms.Resize((299,299)),
+            datasets.ImageFolder(test,transform=transforms.Compose([transforms.Resize((299,299)),
             transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
                 ]))
 

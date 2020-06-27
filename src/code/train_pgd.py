@@ -67,7 +67,8 @@ parser.add_argument('--self-training-weight', type=float, default=1.0,
                     help='Weight of self-training.')
 
 parser.add_argument('--load_checkpoint', default='./model/default/model.pth')
-
+parser.add_argument('--data_root', type=str, default='train')
+parser.add_argument('--test_root', type=str, default='test')
 
 
 #####################
@@ -112,8 +113,8 @@ def main():
     # Copies files to the outdir to store complete script with each experiment
     copy_code(args.outdir)
 
-    train_dataset = get_dataset(args.dataset, 'train')
-    test_dataset = get_dataset(args.dataset, 'test')
+    train_dataset = get_dataset(args.dataset, 'train', args.data_root)
+    test_dataset = get_dataset(args.dataset, 'test', args.test_root)
     pin_memory = (args.dataset == "imagenet")
     labelled_loader = DataLoader(train_dataset, shuffle=True, batch_size=args.batch,
                       num_workers=args.workers, pin_memory=pin_memory)
