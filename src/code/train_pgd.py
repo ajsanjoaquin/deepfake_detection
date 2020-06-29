@@ -136,7 +136,6 @@ def main():
         checkpoint = torch.load(args.load_checkpoint)
         model = get_architecture(checkpoint["arch"], args.dataset)
         model.load_state_dict(checkpoint['state_dict'])
-        model[1].fc = nn.Linear(64, get_num_classes('FaceForensics')).cuda()
 
     elif args.pretrained_model != '':
         assert args.arch == 'cifar_resnet110', 'Unsupported architecture for pretraining'
