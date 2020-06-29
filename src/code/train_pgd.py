@@ -128,11 +128,16 @@ def main():
     test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch,
                              num_workers=args.workers, pin_memory=pin_memory)
 
-    if args.pretrained_model == 'xception':
+    if args.pretrained_model == 'xception_first_time':
         model = get_architecture("xception", args.dataset)
         checkpoint = torch.load(args.load_checkpoint)
-        model.load_state_dict(checkpoint, strict=False)
-        
+        model[1].load_state_dict(checkpoint, strict=False)
+    elif args.pretrained_model == 'xception':
+        checkpoint = torch.load(args.load_checkpoint)
+        model = get_architecture(checkpoint["arch"], args.dataset)
+        model.load_state_dict(checkpoint['state_dict'])
+        model[1].fc = nn.Linear(64, get_num_classes('FaceForensics')).cuda()
+
     elif args.pretrained_model != '':
         assert args.arch == 'cifar_resnet110', 'Unsupported architecture for pretraining'
         checkpoint = torch.load(args.pretrained_model)
