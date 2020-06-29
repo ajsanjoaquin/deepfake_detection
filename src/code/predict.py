@@ -6,14 +6,14 @@ import datetime
 import os
 from time import time
 
-from architectures import get_architecture
-from attacks import Attacker, PGD_L2, DDN 
-from core import Smooth
-from datasets import get_dataset, DATASETS, get_num_classes
+from .architectures import get_architecture
+from .attacks import Attacker, PGD_L2, DDN 
+from .core import Smooth
+from .datasets import get_dataset, DATASETS, get_num_classes
 import setGPU
 import torch
 from torchvision.transforms import ToPILImage
-from train_utils import requires_grad_
+from .train_utils import requires_grad_
 
 
 parser = argparse.ArgumentParser(description='Predict on many examples')
@@ -47,6 +47,10 @@ parser.add_argument('--random-start', default=True, type=bool)
 # DDN-specific
 parser.add_argument('--init-norm-DDN', default=256.0, type=float)
 parser.add_argument('--gamma-DDN', default=0.05, type=float)
+
+#data_root and test_root are mutually exclusive
+parser.add_argument('--data_root', type=str, default=None)
+parser.add_argument('--test_root', type=str, default=None)
 
 
 args = parser.parse_args()
@@ -105,7 +109,7 @@ if __name__ == "__main__":
                     init_norm=args.init_norm_DDN, gamma=args.gamma_DDN)
 
     # iterate through the dataset
-    dataset = get_dataset(args.dataset, args.split)
+    dataset = get_dataset(args.dataset, args.split, args.data_root, args.test_root)
     base_smoothed_agree = 0
     for i in range(len(dataset)):
 

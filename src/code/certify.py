@@ -4,9 +4,9 @@ import datetime
 import os
 from time import time
 
-from architectures import get_architecture
-from core import Smooth
-from datasets import get_dataset, DATASETS, get_num_classes
+from .architectures import get_architecture
+from .core import Smooth
+from .datasets import get_dataset, DATASETS, get_num_classes
 import torch
 
 
@@ -22,6 +22,10 @@ parser.add_argument("--split", choices=["train", "test"], default="test", help="
 parser.add_argument("--N0", type=int, default=100)
 parser.add_argument("--N", type=int, default=100000, help="number of samples to use")
 parser.add_argument("--alpha", type=float, default=0.001, help="failure probability")
+
+#data_root and test_root are mutually exclusive
+parser.add_argument('--data_root', type=str, default=None)
+parser.add_argument('--test_root', type=str, default=None)
 args = parser.parse_args()
 
 if __name__ == "__main__":
@@ -38,7 +42,7 @@ if __name__ == "__main__":
     print("idx\tlabel\tpredict\tradius\tcorrect\ttime", file=f, flush=True)
 
     # iterate through the dataset
-    dataset = get_dataset(args.dataset, args.split)
+    dataset = get_dataset(args.dataset, args.split, args.data_root, args.test_root)
     for i in range(len(dataset)):
 
         # only certify every args.skip examples, and stop after args.max examples
