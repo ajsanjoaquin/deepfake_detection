@@ -56,7 +56,7 @@ def get_num_classes(dataset: str):
         return 1000
     elif dataset == "cifar10":
         return 10
-    elif dataset == "FaceForesnics":
+    elif dataset == "FaceForensics":
         return 2
 
 

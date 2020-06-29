@@ -242,8 +242,6 @@ def train(loader: DataLoader, model: torch.nn.Module, criterion, optimizer: Opti
         for inputs, targets in mini_batches:
             inputs = inputs.cuda()
             targets = targets.cuda()
-            print(inputs.shape)
-            print(batch[0].shape)
 
             inputs = inputs.repeat((1, args.num_noise_vec, 1, 1)).view(batch[0].shape)
 
