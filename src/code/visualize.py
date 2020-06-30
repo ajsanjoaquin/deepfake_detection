@@ -12,10 +12,13 @@ parser.add_argument("outdir", type=str, help="output directory")
 parser.add_argument("idx", type=int)
 parser.add_argument("noise_sds", nargs='+', type=float)
 parser.add_argument("--split", choices=["train", "test"], default="test")
+
+parser.add_argument('--data_root', type=str, default='train')
+parser.add_argument('--test_root', type=str, default='test')
 args = parser.parse_args()
 
 toPilImage = ToPILImage()
-dataset = get_dataset(args.dataset, args.split)
+dataset = get_dataset(args.dataset, args.split, args.data_root, args.test_root)
 image, _ = dataset[args.idx]
 noise = torch.randn_like(image)
 for noise_sd in args.noise_sds:
