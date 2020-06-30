@@ -1,7 +1,7 @@
 # visualize noisy images
 import argparse
 
-from datasets import get_dataset, DATASETS
+from .datasets import get_dataset, DATASETS
 import torch
 from torchvision.transforms import ToPILImage
 
