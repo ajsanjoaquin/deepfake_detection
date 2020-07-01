@@ -50,7 +50,7 @@ for data, label in tqdm(te_loader):
     data, label = tensor2cuda(data), tensor2cuda(label)
 
     VBP = VanillaBackprop(model)
-    grad, model_output = VBP.generate_gradients(data, label)
+    grad = VBP.generate_gradients(data, label)
     grad_flat = grad.view(grad.shape[0], -1)
     mean = grad_flat.mean(1, keepdim=True).unsqueeze(2).unsqueeze(3)
     std = grad_flat.std(1, keepdim=True).unsqueeze(2).unsqueeze(3)
