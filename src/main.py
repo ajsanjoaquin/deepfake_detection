@@ -12,7 +12,23 @@ from .models import model_selection
 from src.attack import adv_attack
 from src.utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, save_model
 
+import pandas as pd
 from src.argument import parser, print_args
+classes={0:'fake',1:'real'}
+class ImageFolderWithPaths(tv.datasets.ImageFolder):
+    """Custom dataset that includes image file paths. Extends
+    torchvision.datasets.ImageFolder
+    """
+
+    # override the __getitem__ method. this is the method that dataloader calls
+    def __getitem__(self, index):
+        # this is what ImageFolder normally returns 
+        original_tuple = super(ImageFolderWithPaths, self).__getitem__(index)
+        # the image file path
+        path = self.imgs[index][0]
+        # make a new tuple that includes original and the path
+        tuple_with_path = (original_tuple + (path,))
+        return tuple_with_path
 
 class Trainer():
     def __init__(self, args, logger):
@@ -117,16 +133,27 @@ class Trainer():
         adv_correct = 0
         total = 0
         test_correct=0
+
+        pathlist=[]
+        labellist=[]
+        predlist=[]
         
         with torch.no_grad():
-            for data,labels in loader:
+            for data,labels, paths in loader:
                 data, labels = tensor2cuda(data), tensor2cuda(labels)
                 #forward
                 output = model(data)
+                #return probabilities for dataframe
+                preds= torch.nn.functional.softmax(output)
+
                 _, pred = torch.max(output.data, 1)
 
                 total += labels.size(0)
                 test_correct += (pred == labels).sum().item()
+
+                pathlist.extend(paths)
+                labellist.extend(labels)
+                predlist.extend(preds)
 
                 if adv_test:
                     if pred.item() !=labels.item():
@@ -140,8 +167,16 @@ class Trainer():
                     adv_correct += (adv_pred == labels).sum().item()
                 else:
                     adv_correct = -total
-                    
 
+        results=pd.DataFrame.from_dict(dict(zip(pathlist,zip(labellist,predlist))),orient='index',columns=['actual','probs']).rename_axis('filename').reset_index()
+        results['actual']=results['actual'].apply(lambda x: classes[x.item()])
+        results['fake']=results['probs'].apply(lambda x: x[0].item())
+        results['real']=results['probs'].apply(lambda x: x[1].item())
+        results.drop(['probs'], axis=1, inplace=True)
+        #get the column name of the highest probability
+        results['predicted'] = results[['fake','real']].idxmax(axis=1)
+        results.to_csv('%s_results.csv'%args.affix)
+        
         with open('%s_out.txt'% args.affix, 'w') as f:
             print('Standard Accuracy: %.4f, Adversarial Accuracy: %.4f' % (test_correct / total, adv_correct / total) ,file=f)
         return test_correct/total , adv_correct / total
@@ -188,7 +223,7 @@ def main(args):
 
         trainer.train(model, tr_loader, te_loader, adv_train=args.adv)
     elif args.todo == 'test':
-        te_dataset=tv.datasets.ImageFolder(args.data_root,transform=transform)
+        te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
         te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
         std_acc, adv_acc = trainer.test(model, te_loader, adv_test=args.adv)
         print("std acc: %.4f, adv_acc: %.4f" % (std_acc * 100, adv_acc * 100))

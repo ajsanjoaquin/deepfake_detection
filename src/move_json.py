@@ -16,6 +16,12 @@ if args.type=='fake':
     try:
       shutil.copy(join('manipulated_sequences/NeuralTextures/c23/videos',pair+'.mp4'),args.o)
     except: continue
+  paired2=['_'.join(reversed(pair)) for pair in data]
+  for pair in paired2:
+    try:
+      shutil.copy(join('manipulated_sequences/NeuralTextures/c23/videos',pair+'.mp4'),args.o)
+    except: continue
+
 elif args.type=='real':
   for pair in data:
     for vid in pair:
