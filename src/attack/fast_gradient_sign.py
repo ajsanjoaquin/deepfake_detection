@@ -39,5 +39,5 @@ def adv_attack(data, label, model, epsilon):
     data_grad=data.grad.data
     #FGSM
     adv_data=fgsm_attack(data, epsilon, data_grad)
-    return model(adv_data)
+    return adv_data
 

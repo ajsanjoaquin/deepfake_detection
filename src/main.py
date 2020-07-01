@@ -158,7 +158,8 @@ class Trainer():
                     continue
 
                 # Re-classify the perturbed image
-                adv_out = adv_attack (data, labels, model, args.epsilon)
+                adv_data = adv_attack (data, labels, model, args.epsilon)
+                adv_out = model(adv_data)
                 preds= torch.nn.functional.softmax(adv_out)
                 _, adv_pred = torch.max(adv_out.data , dim=1)
 
