@@ -1,1 +1,1 @@
-from .fast_gradient_sign_untargeted import adv_attack
+from .fast_gradient_sign import adv_attack
