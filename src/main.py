@@ -151,16 +151,15 @@ class Trainer():
                 total += labels.size(0)
                 test_correct += (pred == labels).sum().item()
 
-                pathlist.extend(paths)
-                labellist.extend(labels)
-                predlist.extend(preds)
 
                 if adv_test:
+                    #if already incorrect, don't attack it anymore
                     if pred.item() !=labels.item():
                         continue
 
                     # Re-classify the perturbed image
                     adv_out = adv_attack (data, labels, model, args.epsilon)
+                    preds= torch.nn.functional.softmax(output)
                     _, adv_pred = torch.max(adv_out.data , dim=1)
 
                     total += labels.size(0)
@@ -168,6 +167,9 @@ class Trainer():
                 else:
                     adv_correct = -total
 
+                pathlist.extend(paths)
+                labellist.extend(labels)
+                predlist.extend(preds)
         results=pd.DataFrame.from_dict(dict(zip(pathlist,zip(labellist,predlist))),orient='index',columns=['actual','probs']).rename_axis('filename').reset_index()
         results['actual']=results['actual'].apply(lambda x: classes[x.item()])
         results['fake']=results['probs'].apply(lambda x: x[0].item())
