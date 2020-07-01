@@ -8,7 +8,7 @@ import os
 import numpy as np
 
 import torch
-import torch.nn.functional as F
+import torch.nn as nn
 
 from src.utils import tensor2cuda
 
@@ -32,7 +32,7 @@ def adv_attack(data, label, model, epsilon):
 
     output = model(data)
 
-    loss = F.CrossEntropyLoss(output, label)
+    loss = nn.CrossEntropyLoss(output, label)
     #get grads of model in backward pass
     loss.backward()
     #collect data grad
