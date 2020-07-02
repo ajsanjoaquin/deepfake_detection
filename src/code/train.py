@@ -44,7 +44,8 @@ parser.add_argument('--gpu', default=None, type=str,
 parser.add_argument('--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 
-
+parser.add_argument('--pretrained-model', type=str, default='',
+                    help='Path to a pretrained model')
 parser.add_argument('--load_checkpoint', default='./model/default/model.pth')
 parser.add_argument('--data_root', type=str, default='train')
 parser.add_argument('--test_root', type=str, default='test')
@@ -86,6 +87,7 @@ def main():
         train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, args.noise_sd)
         test_loss, test_acc = test(test_loader, model, criterion, args.noise_sd)
         after = time.time()
+        print('Train acc:{}, Test acc:{}'.format(train_acc,test_acc))
 
         log(logfilename, "{}\t{:.3}\t{:.3}\t{:.3}\t{:.3}\t{:.3}\t{:.3}".format(
             epoch, after - before,

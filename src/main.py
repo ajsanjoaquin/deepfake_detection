@@ -127,6 +127,7 @@ class Trainer():
 
 
     def test(self, model, loader, adv_test=False,valid=False):
+        #TODo make an adv
         # adv_test is False, return adv_acc as -1 
         model.eval()
         logger = self.logger
@@ -140,21 +141,21 @@ class Trainer():
         labellist=[]
         predlist=[]
         
-        for data,labels, paths in loader:
-            data, labels = tensor2cuda(data), tensor2cuda(labels)
-            #forward
-            output = model(data)
-            #return probabilities for dataframe
-            if valid ==False:
-                preds= torch.nn.functional.softmax(output)
+        if adv_test:
+            for data,labels, paths in loader:
+                data, labels = tensor2cuda(data), tensor2cuda(labels)
+                #forward
+                output = model(data)
+                #return probabilities for dataframe
+                if valid ==False:
+                    preds= torch.nn.functional.softmax(output)
 
-            _, pred = torch.max(output.data, 1)
+                _, pred = torch.max(output.data, 1)
 
-            total += labels.size(0)
-            test_correct += (pred == labels).sum().item()
+                total += labels.size(0)
+                test_correct += (pred == labels).sum().item()
 
 
-            if adv_test:
                 #if already incorrect, don't attack it anymore
                 #fix for more than 1 batch size
                 if (pred !=labels).item():
@@ -169,13 +170,33 @@ class Trainer():
 
                 total += labels.size(0)
                 adv_correct += (adv_pred == labels).sum().item()
-            else:
-                adv_correct = -total
 
-            pathlist.extend(paths)
-            labellist.extend(labels)
-            if valid==False:
-                predlist.extend(preds)
+                pathlist.extend(paths)
+                labellist.extend(labels)
+                if valid==False:
+                    predlist.extend(preds)
+        else:
+            #turn off backprop (important to avoid cuda memory error)
+            with torch.no_grad():
+                for data,labels, paths in loader:
+                    data, labels = tensor2cuda(data), tensor2cuda(labels)
+                    #forward
+                    output = model(data)
+                    #return probabilities for dataframe
+                    if valid ==False:
+                        preds= torch.nn.functional.softmax(output)
+
+                    _, pred = torch.max(output.data, 1)
+
+                    total += labels.size(0)
+                    test_correct += (pred == labels).sum().item()
+                    adv_correct = -total
+                    pathlist.extend(paths)
+                    labellist.extend(labels)
+                    if valid==False:
+                        predlist.extend(preds)
+                
+
         if valid==False:
             results=pd.DataFrame.from_dict(dict(zip(pathlist,zip(labellist,predlist))),orient='index',columns=['actual','probs']).rename_axis('filename').reset_index()
             results['actual']=results['actual'].apply(lambda x: classes[x.item()])
