@@ -56,11 +56,13 @@ class Trainer():
                                                          gamma=0.1)
         acc = 0.0
         valid_acc = 0.0
+        best_acc=0
+        best_va_acc=0
 
         logger.info("Train: %d, Validation: %d" % (len(tr_loader.dataset),len(va_loader.dataset)))
         for epoch in range(1, args.max_epoch+1):
             model.train()
-            for data, label in tr_loader:
+            for data, label, paths in tr_loader:
                 data, label = tensor2cuda(data), tensor2cuda(label)
                 
                 opt.zero_grad()
@@ -143,7 +145,8 @@ class Trainer():
             #forward
             output = model(data)
             #return probabilities for dataframe
-            preds= torch.nn.functional.softmax(output)
+            if valid ==False:
+                preds= torch.nn.functional.softmax(output)
 
             _, pred = torch.max(output.data, 1)
 
@@ -160,7 +163,8 @@ class Trainer():
                 # Re-classify the perturbed image
                 adv_data = adv_attack (data, labels, model, args.epsilon)
                 adv_out = model(adv_data)
-                preds= torch.nn.functional.softmax(adv_out)
+                if valid ==False:
+                    preds= torch.nn.functional.softmax(adv_out)
                 _, adv_pred = torch.max(adv_out.data , dim=1)
 
                 total += labels.size(0)
@@ -170,15 +174,17 @@ class Trainer():
 
             pathlist.extend(paths)
             labellist.extend(labels)
-            predlist.extend(preds)
-        results=pd.DataFrame.from_dict(dict(zip(pathlist,zip(labellist,predlist))),orient='index',columns=['actual','probs']).rename_axis('filename').reset_index()
-        results['actual']=results['actual'].apply(lambda x: classes[x.item()])
-        results['fake']=results['probs'].apply(lambda x: x[0].item())
-        results['real']=results['probs'].apply(lambda x: x[1].item())
-        results.drop(['probs'], axis=1, inplace=True)
-        #get the column name of the highest probability
-        results['predicted'] = results[['fake','real']].idxmax(axis=1)
-        results.to_csv('%s_results.csv'%args.affix)
+            if valid==False:
+                predlist.extend(preds)
+        if valid==False:
+            results=pd.DataFrame.from_dict(dict(zip(pathlist,zip(labellist,predlist))),orient='index',columns=['actual','probs']).rename_axis('filename').reset_index()
+            results['actual']=results['actual'].apply(lambda x: classes[x.item()])
+            results['fake']=results['probs'].apply(lambda x: x[0].item())
+            results['real']=results['probs'].apply(lambda x: x[1].item())
+            results.drop(['probs'], axis=1, inplace=True)
+            #get the column name of the highest probability
+            results['predicted'] = results[['fake','real']].idxmax(axis=1)
+            results.to_csv('%s_results.csv'%args.affix)
         
         with open('%s_out.txt'% args.affix, 'w') as f:
             print('Standard Accuracy: %.4f, Adversarial Accuracy: %.4f' % (test_correct / total, adv_correct / total) ,file=f)
@@ -215,7 +221,7 @@ def main(args):
                 ])
 
     if args.todo == 'train':
-        tr_dataset=tv.datasets.ImageFolder(args.data_root,transform=transform)
+        tr_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
         logger.info('Total: %d'%len(tr_dataset))
         logger.info( "Classes: {}".format(' '.join(map(str, tr_dataset.classes))))
         #split 80% train, 20% val
