@@ -78,8 +78,8 @@ class Trainer():
                 
                 if adv_train:
                     _, adv_pred = torch.max(output.data, dim=1)
-                    correct += (adv_pred == label).sum()
-                    total += label.size(0)
+                    #correct += (adv_pred == label).sum()
+                    #total += label.size(0)
 
                     adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy()) * 100
                     std_acc = -1
@@ -87,8 +87,8 @@ class Trainer():
 
                 else:
                     _, pred = torch.max(output.data, dim=1)
-                    correct += (pred == label).sum()
-                    total += label.size(0)
+                    #correct += (pred == label).sum()
+                    #total += label.size(0)
                     std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
 
             if va_loader is not None:
