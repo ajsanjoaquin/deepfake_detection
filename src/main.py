@@ -59,6 +59,9 @@ class Trainer():
         best_acc=0
         best_va_acc=0
 
+        correct=0
+        total=0
+
         logger.info("Train: %d, Validation: %d" % (len(tr_loader.dataset),len(va_loader.dataset)))
         for epoch in range(1, args.max_epoch+1):
             model.train()
@@ -80,18 +83,20 @@ class Trainer():
                 
                 if adv_train:
                     _, adv_pred = torch.max(output.data, dim=1)
-                    #correct += (adv_pred == label).sum()
-                    #total += label.size(0)
+                    adv_correct += (adv_pred == label).sum().item()
+                    total += label.size(0)
 
                     adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy()) * 100
-                    std_acc = -1
+                    #std_acc = -1
+                    correct = -1
 
 
                 else:
                     _, pred = torch.max(output.data, dim=1)
-                    #correct += (pred == label).sum()
-                    #total += label.size(0)
-                    std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
+                    correct += (pred == label).sum().item()
+                    total += label.size(0)
+                    #std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
+                    std_acc= (correct/total) * 100
 
             if va_loader is not None:
                 model.eval()

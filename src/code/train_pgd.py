@@ -133,7 +133,8 @@ def main():
         checkpoint = torch.load(args.load_checkpoint)
         model[1].load_state_dict(checkpoint, strict=False)
     elif args.pretrained_model == 'xception':
-        checkpoint = torch.load(args.load_checkpoint)
+        checkpoint = torch.load(args.load_checkpoint,
+                                    map_location=lambda storage, loc: storage)
         model = get_architecture(checkpoint["arch"], args.dataset)
         model.load_state_dict(checkpoint['state_dict'])
 
