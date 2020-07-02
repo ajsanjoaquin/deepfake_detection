@@ -31,7 +31,7 @@ test_transform = transforms.Compose([transforms.Resize((299,299)),
               ])
 
 te_dataset=tv.datasets.ImageFolder(args.data_root,transform=test_transform)
-te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
+te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
 #model instantiation
 model, *_ = model_selection(modelname='xception', num_out_classes=2)

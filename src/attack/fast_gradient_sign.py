@@ -19,7 +19,7 @@ def fgsm_attack(image, epsilon, data_grad):
     sign_data_grad = data_grad.sign()
     # Create the perturbed image by adjusting each pixel of the input image
     perturbed_image = image + epsilon*sign_data_grad
-    # Adding clipping to maintain [0,1] range
+    # Adding clipping to maintain [0,1] range; explains why 0 epsilon image is still modified
     perturbed_image = torch.clamp(perturbed_image, 0, 1)
     # Return the perturbed image
     return perturbed_image
@@ -31,8 +31,9 @@ def adv_attack(data, label, model, epsilon):
     model.zero_grad()
 
     output = model(data)
+    criterion=nn.CrossEntropyLoss()
 
-    loss = nn.CrossEntropyLoss(output, label)
+    loss = criterion(output, label)
     #get grads of model in backward pass
     loss.backward()
     #collect data grad
