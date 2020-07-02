@@ -7,14 +7,14 @@ import datetime
 import os
 import time
 
-from architectures import ARCHITECTURES, get_architecture
-from datasets import get_dataset, DATASETS
+from .architectures import ARCHITECTURES, get_architecture
+from .datasets import get_dataset, DATASETS
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import SGD, Optimizer
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
-from train_utils import AverageMeter, accuracy, init_logfile, log
+from .train_utils import AverageMeter, accuracy, init_logfile, log
 
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
@@ -43,6 +43,11 @@ parser.add_argument('--gpu', default=None, type=str,
                     help='id(s) for CUDA_VISIBLE_DEVICES')
 parser.add_argument('--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
+
+
+parser.add_argument('--load_checkpoint', default='./model/default/model.pth')
+parser.add_argument('--data_root', type=str, default='train')
+parser.add_argument('--test_root', type=str, default='test')
 args = parser.parse_args()
 
 
@@ -53,18 +58,23 @@ def main():
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir)
 
-    train_dataset = get_dataset(args.dataset, 'train')
-    test_dataset = get_dataset(args.dataset, 'test')
+    train_dataset = get_dataset(args.dataset, 'train', args.data_root, None)
+    test_dataset = get_dataset(args.dataset, 'test', None, args.test_root)
     pin_memory = (args.dataset == "imagenet")
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=args.batch,
                               num_workers=args.workers, pin_memory=pin_memory)
     test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch,
                              num_workers=args.workers, pin_memory=pin_memory)
-
-    model = get_architecture(args.arch, args.dataset)
+    if args.pretrained_model == 'xception_first_time':
+        model = get_architecture("xception", args.dataset)
+        checkpoint = torch.load(args.load_checkpoint)
+        model[1].load_state_dict(checkpoint, strict=False)
+    else:
+        model = get_architecture(args.arch, args.dataset)
 
     logfilename = os.path.join(args.outdir, 'log.txt')
     init_logfile(logfilename, "epoch\ttime\tlr\ttrain loss\ttrain acc\ttestloss\ttest acc")
+    print(len(train_dataset.classes))
 
     criterion = CrossEntropyLoss().cuda()
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
@@ -115,7 +125,7 @@ def train(loader: DataLoader, model: torch.nn.Module, criterion, optimizer: Opti
         loss = criterion(outputs, targets)
 
         # measure accuracy and record loss
-        acc1, acc5 = accuracy(outputs, targets, topk=(1, 5))
+        acc1, acc5 = accuracy(outputs, targets, topk=(1, 2))
         losses.update(loss.item(), inputs.size(0))
         top1.update(acc1.item(), inputs.size(0))
         top5.update(acc5.item(), inputs.size(0))
@@ -135,7 +145,7 @@ def train(loader: DataLoader, model: torch.nn.Module, criterion, optimizer: Opti
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                   'Acc@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                  'Acc@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
+                  'Acc@2 {top5.val:.3f} ({top5.avg:.3f})'.format(
                 epoch, i, len(loader), batch_time=batch_time,
                 data_time=data_time, loss=losses, top1=top1, top5=top5))
 
@@ -169,7 +179,7 @@ def test(loader: DataLoader, model: torch.nn.Module, criterion, noise_sd: float)
             loss = criterion(outputs, targets)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(outputs, targets, topk=(1, 5))
+            acc1, acc5 = accuracy(outputs, targets, topk=(1, 2))
             losses.update(loss.item(), inputs.size(0))
             top1.update(acc1.item(), inputs.size(0))
             top5.update(acc5.item(), inputs.size(0))
@@ -184,7 +194,7 @@ def test(loader: DataLoader, model: torch.nn.Module, criterion, noise_sd: float)
                       'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                       'Acc@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                      'Acc@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
+                      'Acc@2 {top5.val:.3f} ({top5.avg:.3f})'.format(
                     i, len(loader), batch_time=batch_time,
                     data_time=data_time, loss=losses, top1=top1, top5=top5))
 
