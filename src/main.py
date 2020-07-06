@@ -212,7 +212,7 @@ class Trainer():
             results['predicted'] = results[['fake','real']].idxmax(axis=1)
             results.to_csv('%s_results.csv'%args.affix)
         
-        with open('%s_out.txt'% args.affix, 'w') as f:
+        with open(os.path.join(args.log_root,'%s_out.txt'% args.affix), 'w') as f:
             print('Standard Accuracy: %.4f, Adversarial Accuracy: %.4f' % (test_correct / total, adv_correct / total) ,file=f)
         return test_correct/total , adv_correct / total
 
