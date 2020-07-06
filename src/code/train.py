@@ -35,8 +35,8 @@ parser.add_argument('--gamma', type=float, default=0.1,
                     help='LR is multiplied by gamma on schedule.')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
-parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
-                    metavar='W', help='weight decay (default: 1e-4)')
+parser.add_argument('--weight-decay', '--wd', default=2e-4, type=float,
+                    metavar='W', help='weight decay (default: 2e-4)')
 parser.add_argument('--noise_sd', default=0.0, type=float,
                     help="standard deviation of Gaussian noise for data augmentation")
 parser.add_argument('--gpu', default=None, type=str,
@@ -70,12 +70,14 @@ def main():
                               num_workers=args.workers, pin_memory=pin_memory)
     test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch,
                              num_workers=args.workers, pin_memory=pin_memory)
+    checkpoint = torch.load(args.load_checkpoint)
     if args.pretrained_model == 'xception_first_time':
         model = get_architecture("xception", args.dataset)
-        checkpoint = torch.load(args.load_checkpoint)
         model[1].load_state_dict(checkpoint, strict=False)
     else:
-        model = get_architecture(args.arch, args.dataset)
+        model = get_architecture(checkpoint["arch"], args.dataset)
+        model.load_state_dict(checkpoint, strict=False)
+
 
     logfilename = os.path.join(args.outdir, 'log.txt')
     init_logfile(logfilename, "epoch\ttime\tlr\ttrain loss\ttrain acc\ttestloss\ttest acc")
@@ -94,7 +96,7 @@ def main():
         test_loss, test_acc = test(test_loader, model, criterion, args.noise_sd)
         scheduler.step(epoch)
         after = time.time()
-        print('Train Loss:{}, Train acc:{}, Test Loss:{}, Test acc:{}'.format(train_loss, train_acc,test_loss, test_acc))
+        print('Epoch:{}, Train Loss:{}, Train acc:{}, Test Loss:{}, Test acc:{}'.format(epoch, train_loss, train_acc,test_loss, test_acc))
 
         log(logfilename, "{}\t{:.3}\t{:.3}\t{:.3}\t{:.3}\t{:.3}\t{:.3}".format(
             epoch, after - before,
@@ -168,7 +170,7 @@ def train(loader: DataLoader, model: torch.nn.Module, criterion, optimizer: Opti
                   'Acc@2 {top5.val:.3f} ({top5.avg:.3f})'.format(
                 epoch, i, len(loader), batch_time=batch_time,
                 data_time=data_time, loss=losses, top1=top1, top5=top5))'''
-            print('Epoch: [{0}][{1}/{2}]'.format(epoch,i,len(loader)))
+            #print('Epoch: [{0}][{1}/{2}]'.format(epoch,i,len(loader)))
 
     return (loss.item(), std_acc)
 
