@@ -3,10 +3,12 @@ from matplotlib.patches import Rectangle
 from matplotlib.patches import Circle
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 from mtcnn.mtcnn import MTCNN
 import cv2
 from tqdm import tqdm
 import argparse
+import tensorflow as tf
 
 parser = argparse.ArgumentParser(description='Finds and crops the faces in a set of images in a folder ')
 parser.add_argument('--i','--input',type=str, default='.', help='input_path')
@@ -14,6 +16,9 @@ parser.add_argument('--o','--output',type=str, default='../cropped_images',help=
 
 
 args = parser.parse_args()
+
+
+
  
  #Parameters
 detector = MTCNN(min_face_size=180)
@@ -35,7 +40,11 @@ for file in tqdm(os.listdir(tobe_filtered)):
       pixels = cv2.cvtColor(cv2.imread(path),cv2.COLOR_BGR2RGB)
       # create the detector, using default weights
       # detect faces in the image
-      faces = detector.detect_faces(pixels)
+      faces = 0
+      try:
+        faces = detector.detect_faces(pixels)
+      except:
+        pass
       # display faces on the original image
       # save each face as an image
       for i in (range(len(faces))):

@@ -210,7 +210,7 @@ class Trainer():
             results.drop(['probs'], axis=1, inplace=True)
             #get the column name of the highest probability
             results['predicted'] = results[['fake','real']].idxmax(axis=1)
-            results.to_csv('%s_results.csv'%args.affix)
+            results.to_csv(os.path.join(args.log_root,'%s_results.csv'%args.affix))
         
         with open(os.path.join(args.log_root,'%s_out.txt'% args.affix), 'w') as f:
             print('Standard Accuracy: %.4f, Adversarial Accuracy: %.4f' % (test_correct / total, adv_correct / total) ,file=f)
@@ -218,16 +218,13 @@ class Trainer():
 
 def main(args):
     device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    log_folder = args.log_root
-
-    makedirs(log_folder)
+    makedirs(args.log_root)
     makedirs(args.model_folder)
 
-    setattr(args, 'log_folder', log_folder)
+    setattr(args, 'log_folder', args.log_root)
     setattr(args, 'model_folder', args.model_folder)
 
-    logger = create_logger(log_folder, args.todo, 'info')
+    logger = create_logger(args.log_root, args.todo, 'info')
 
     print_args(args, logger)
     model, *_ = model_selection(modelname='xception', num_out_classes=2)
