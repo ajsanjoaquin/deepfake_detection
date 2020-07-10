@@ -96,11 +96,7 @@ def test_full_image_network(video_path, output_path,
 
     # Frame numbers and length of output video
     frame_num = 0
-    try:
-        assert start_frame < num_frames - 1
-    except AssertionError:
-        print(start_frame, num_frames)
-        pass
+    assert start_frame < num_frames - 1
     end_frame = end_frame if end_frame else num_frames
     pbar = tqdm(total=end_frame-start_frame)
 
@@ -132,6 +128,7 @@ def test_full_image_network(video_path, output_path,
               cv2.imwrite(join(output_path,'{}_{}.png'.format(basename(video_path),frame_num)), cropped_face)
             except:
               pass
+    pbar.close()
 
 
 video_path = args.i
