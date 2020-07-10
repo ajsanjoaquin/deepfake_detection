@@ -244,11 +244,11 @@ def main(args):
                 ])
 
     if args.todo == 'train':
-        tr_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
-        logger.info('Total: %d'%len(tr_dataset))
-        logger.info( "Classes: {}".format(' '.join(map(str, tr_dataset.classes))))
-        #split 80% train, 20% val
-        train_set, val_set = torch.utils.data.random_split(tr_dataset,[round(len(tr_dataset)*0.80),round(len(tr_dataset)*0.20)])
+        train_set= ImageFolderWithPaths(args.data_root,transform=transform)
+        val_set=ImageFolderWithPaths(args.val_root,transform=transform)
+        logger.info('Train Total: %d'%len(train_set))
+        logger.info('Train Total: %d'%len(val_set))
+        logger.info( "Classes: {}".format(' '.join(map(str, train_set.classes))))
 
         tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4)
         te_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4)
