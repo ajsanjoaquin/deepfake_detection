@@ -46,23 +46,29 @@ gradlist=[]
 labellist=[]
 label_dict = {0:'fake',1:'real'}
 
+#make every target label real
+tf=np.ones(args.batch_size, dtype=np.int64)
+x=torch.from_numpy(tf)
+x=x.cuda()
+
 for data, label in tqdm(te_loader):
     data, label = tensor2cuda(data), tensor2cuda(label)
 
     VBP = VanillaBackprop(model)
-    grad = VBP.generate_gradients(data, label)
-    grad_flat = grad.view(grad.shape[0], -1)
+    grad = VBP.generate_gradients(data, x)
+    
+    #normalization
+    '''grad_flat = grad.view(grad.shape[0], -1)
     mean = grad_flat.mean(1, keepdim=True).unsqueeze(2).unsqueeze(3)
     std = grad_flat.std(1, keepdim=True).unsqueeze(2).unsqueeze(3)
 
     mean = mean.repeat(1, 1, data.shape[2], data.shape[3])
     std = std.repeat(1, 1, data.shape[2], data.shape[3])
 
-
-
     grad = torch.max(torch.min(grad, mean+3*std), mean-3*std)
     grad -= grad.min()
-    grad /= grad.max()
+    grad /= grad.max()'''
+    #unnormalized
     grad = grad.cpu().numpy().squeeze() *255 # (N, 28, 28)
 
     labellist.extend(label)
