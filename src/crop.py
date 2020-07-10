@@ -96,7 +96,11 @@ def test_full_image_network(video_path, output_path,
 
     # Frame numbers and length of output video
     frame_num = 0
-    assert start_frame < num_frames - 1
+    try:
+        assert start_frame < num_frames - 1
+    except AssertionError:
+        print(start_frame, num_frames)
+        continue
     end_frame = end_frame if end_frame else num_frames
     pbar = tqdm(total=end_frame-start_frame)
 
