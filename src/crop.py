@@ -138,5 +138,5 @@ if video_path.endswith('.mp4') or video_path.endswith('.avi'):
 else:
     videos = os.listdir(video_path)
     for video in videos:
-        video_path = join(video_path, video)
-        test_full_image_network(video_path, output_path)
+        path = join(video_path, video)
+        test_full_image_network(path, output_path)
