@@ -78,7 +78,8 @@ for data, label in tqdm(te_loader):
 for i in tqdm(range(len(te_dataset.samples))):
     img = gradlist[i]
     img = np.transpose(img, (1, 2, 0))
-    img = img.astype(np.uint8)
+    #for normalized only
+    #img = img.astype(np.uint8)
 
     fig=plt.figure()
     ax = plt.Axes(fig, [0., 0., 1., 1.])
