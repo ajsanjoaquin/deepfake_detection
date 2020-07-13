@@ -21,7 +21,6 @@ from PIL import Image as pil_image
 from tqdm import tqdm
 
 from .models import model_selection
-from dataset.transform import xception_default_data_transforms
 
 parser = argparse.ArgumentParser(description='Computes accuracy on Test set')
 parser.add_argument('--i',type=str, default='.', help='input_path')
