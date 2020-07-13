@@ -2,6 +2,7 @@ import torch
 import torchvision as tv
 import numpy as np
 import os, shutil
+from os.path import basename
 from torch.utils.data import DataLoader
 import sys
 from torchvision import transforms
@@ -88,9 +89,9 @@ for i in tqdm(range(len(te_dataset.samples))):
     try:
         ax.imshow(img)
         if label_dict[labellist[i].item()]=='fake':
-            plt.savefig(os.path.join(fake, 'grad_{}'.format(i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
+            plt.savefig(os.path.join(fake, '{}_grad_{}'.format(basename(args.output),i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
         else:
-            plt.savefig(os.path.join(real, 'grad_{}'.format(i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
+            plt.savefig(os.path.join(real, '{}_grad_{}'.format(basename(args.output),i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
     except: 
         pass
     #CLEAR FIGURE FOR NEXT IMAGE
