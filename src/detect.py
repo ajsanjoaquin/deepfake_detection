@@ -17,6 +17,7 @@ import cv2
 import dlib
 import torch
 import torch.nn as nn
+from torchvision import transforms
 from PIL import Image as pil_image
 from tqdm import tqdm
 
