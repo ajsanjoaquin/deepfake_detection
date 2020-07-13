@@ -1,31 +1,44 @@
-import os,shutil
-from tqdm import tqdm
+import json
+import shutil
+from os.path import join
 import argparse
-
-DATASETS = {
-    'original': 'original_sequences/youtube',
-    'Deepfakes': 'manipulated_sequences/Deepfakes',
-    'DeepFakeDetection': 'manipulated_sequences/DeepFakeDetection',
-    'Face2Face': 'manipulated_sequences/Face2Face',
-    'FaceSwap': 'manipulated_sequences/FaceSwap',
-    'NeuralTextures': 'manipulated_sequences/NeuralTextures'
-    }
-parser = argparse.ArgumentParser(description='Move File')
-parser.add_argument('--d','--data',type=str, default='original', choices=list(DATASETS.keys()), help='input_path')
+parser = argparse.ArgumentParser(description='Move File according to JSON')
+parser.add_argument('--json',type=str, default='.', help='json file')
+parser.add_argument('--type',type=str,default='real',help='dataset type')
+parser.add_argument('--i',type=str,default='test_vids/real')
+parser.add_argument('--o',type=str,default='test_vids/real')
 args = parser.parse_args()
 
-subfolders= [f.path for f in os.scandir(os.path.join(DATASETS[args.d],'c23/images')) if f.is_dir()]
-if args.d=='original':
-    out_path='/scratch/users/nus/dcsduxi/real_raw'
-else:
-    out_path='/scratch/users/nus/dcsduxi/fake_raw'
-if not os.path.exists(out_path):
-        os.makedirs(out_path)
-total=0
-for folder in tqdm(subfolders):
-  for file in os.listdir(folder):
-    if file.endswith('.png'):
-      in_path = os.path.join(folder, file)
-      total+=1
-      shutil.move(in_path, os.path.join(out_path,'{}.png'.format(total)))
-print(total)
+path=os.listdir(args.i)
+with open(args.json) as f:
+  data = json.load(f)
+if args.type=='fake':
+  count=0
+  paired=['_'.join(pair) for pair in data]
+  for pair in paired:
+    for file in path:
+        if pair+'.mp4' in file:
+            shutil.copy(join(args.i,file),args.o)
+            count+=1
+        if count == 100:
+            break
+  count=0
+  paired2=['_'.join(reversed(pair)) for pair in data]
+  for pair in paired2:
+    for file in path:
+        if pair+'.mp4' in file:
+            shutil.copy(join(args.i,file),args.o)
+            count+=1
+        if count == 100:
+            break
+
+elif args.type=='real':
+  count=0
+  for pair in data:
+    for vid in pair:
+        for file in path:
+            if vid+'.mp4' in file:
+                shutil.copy(join(args.i,file),args.o)
+                count+=1
+            if count == 100:
+                break
