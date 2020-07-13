@@ -199,14 +199,12 @@ def test_full_image_network(video_path, model_path,
     return correct
 
 video_path = args.i
-if video_path.endswith('.mp4') or video_path.endswith('.avi'):
-    test_full_image_network(video_path, args.model_path)
-else:
-    videos = os.listdir(video_path)
-    total_correct=0
-    total=len(videos)
-    for video in videos:
-        path = join(video_path, video)
-        correct= test_full_image_network(path, args.model_path)
-        total_correct+=correct
-    print(correct/total)
+
+videos = os.listdir(video_path)
+total_correct=0
+total=len(videos)
+for video in videos:
+    path = join(video_path, video)
+    correct= test_full_image_network(path, args.model_path)
+    total_correct+=correct
+print("Accuracy:{}, Correct: {}, Total{}".format(total_correct/total,total_correct,total))
