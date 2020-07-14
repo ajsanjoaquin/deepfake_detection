@@ -155,6 +155,7 @@ def test_full_image_network(video_path, model_path,
     end_frame = end_frame if end_frame else num_frames
     pbar = tqdm(total=end_frame-start_frame)
     correct = 0
+    total = 0
 
     while reader.isOpened():
         _, image = reader.read()
@@ -190,18 +191,20 @@ def test_full_image_network(video_path, model_path,
             if args.type =='real':
                 if prediction == 0:
                     correct+=1
+            total+=1
         if frame_num >= end_frame:
             break
     pbar.close()
-    return correct
+    return correct,total
 
 video_path = args.i
 
 videos = os.listdir(video_path)
 total_correct=0
-total=len(videos)
+total_vids=0
 for video in videos:
     path = join(video_path, video)
-    correct= test_full_image_network(path, args.model_path)
+    correct, total= test_full_image_network(path, args.model_path)
     total_correct+=correct
-print("Accuracy:{}, Correct: {}, Total{}".format(total_correct/total,total_correct,total))
+    total_vids+=total
+print("Accuracy:{}, Correct: {}, Total{}".format(total_correct/total_vids,total_correct,total_vids))
