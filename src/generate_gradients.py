@@ -47,13 +47,13 @@ gradlist=[]
 labellist=[]
 label_dict = {0:'fake',1:'real'}
 
-#make every target label real
-tf=np.ones(args.batch_size, dtype=np.int64)
-x=torch.from_numpy(tf)
-x=x.cuda()
 
 for data, label in tqdm(te_loader):
     data, label = tensor2cuda(data), tensor2cuda(label)
+    #make every target label real
+    tf=np.ones(len(data), dtype=np.int64)
+    x=torch.from_numpy(tf)
+    x=x.cuda()
 
     VBP = VanillaBackprop(model)
     grad = VBP.generate_gradients(data, x)
