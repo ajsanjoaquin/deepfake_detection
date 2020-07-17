@@ -227,13 +227,13 @@ def main(args):
     logger = create_logger(args.log_root, args.todo, 'info')
 
     print_args(args, logger)
-    model, *_ = model_selection(modelname='xception', num_out_classes=2)
-    #model = myxception_(num_classes=2, pretrained='imagenet')
-    if device.type=='cpu':
-        checkpoint = torch.load(args.load_checkpoint,map_location=torch.device('cpu'))
-    else:
-        checkpoint = torch.load(args.load_checkpoint)
-    model.load_state_dict(checkpoint)
+    model, *_ = model_selection(modelname='xception', num_out_classes=2, init_checkpoint=args.init_load)
+    if args.init_load is None:
+        if device.type=='cpu':
+            checkpoint = torch.load(args.load_checkpoint,map_location=torch.device('cpu'))
+        else:
+            checkpoint = torch.load(args.load_checkpoint)
+        model.load_state_dict(checkpoint)
 
     if torch.cuda.is_available():
         model.cuda()

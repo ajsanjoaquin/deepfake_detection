@@ -41,6 +41,7 @@ def parser():
         help='the type of the perturbation (linf or l2)')
     
     parser.add_argument('--adv_train', action='store_true')
+    parser.add_argument('--init_load', default= None)
 
     return parser.parse_args()
 

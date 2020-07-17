@@ -15,15 +15,15 @@ import math
 import torchvision
 
 
-def return_pytorch04_xception(pretrained=False):
+def return_pytorch04_xception(init_checkpoint=None):
     # Raises warning "src not broadcastable to dst" but thats fine
     model = xception(pretrained=False)
-    if pretrained:
+    if init_checkpoint is not None:
         # Load model in torch 0.4+
         model.fc = model.last_linear
         del model.last_linear
         state_dict = torch.load(
-            '/home/ondyari/.torch/models/xception-b5690688.pth')
+            init_checkpoint)
         for name, weights in state_dict.items():
             if 'pointwise' in name:
                 state_dict[name] = weights.unsqueeze(-1).unsqueeze(-1)
@@ -38,11 +38,11 @@ class TransferModel(nn.Module):
     Simple transfer learning model that takes an imagenet pretrained model with
     a fc layer as base model and retrains a new fc layer for num_out_classes
     """
-    def __init__(self, modelchoice, num_out_classes=2, dropout=0.0):
+    def __init__(self, modelchoice, num_out_classes=2, dropout=0.0, init_checkpoint=None):
         super(TransferModel, self).__init__()
         self.modelchoice = modelchoice
         if modelchoice == 'xception':
-            self.model = return_pytorch04_xception()
+            self.model = return_pytorch04_xception(init_checkpoint)
             # Replace fc
             num_ftrs = self.model.last_linear.in_features
             if not dropout:
@@ -116,14 +116,14 @@ class TransferModel(nn.Module):
 
 
 def model_selection(modelname, num_out_classes,
-                    dropout=None):
+                    dropout=None, init_checkpoint=None):
     """
     :param modelname:
     :return: model, image size, pretraining<yes/no>, input_list
     """
     if modelname == 'xception':
         return TransferModel(modelchoice='xception',
-                             num_out_classes=num_out_classes), 299, \
+                             num_out_classes=num_out_classes, init_checkpoint=init_checkpoint), 299, \
                True, ['image'], None
     elif modelname == 'resnet18':
         return TransferModel(modelchoice='resnet18', dropout=dropout,
