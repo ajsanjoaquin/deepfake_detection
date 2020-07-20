@@ -217,7 +217,7 @@ class Trainer():
         return test_correct/total , adv_correct / total
 
 def main(args):
-    device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     makedirs(args.log_root)
     makedirs(args.model_folder)
 
@@ -234,9 +234,12 @@ def main(args):
         else:
             checkpoint = torch.load(args.load_checkpoint)
         model.load_state_dict(checkpoint)
-
-    if torch.cuda.is_available():
-        model.cuda()
+        
+    if torch.cuda.device_count() > 1:
+        print('GPUs: ', torch.cuda.device_count())
+        model = nn.DataParallel(model)
+    
+    model.to(device)
 
     trainer = Trainer(args, logger)
     transform = transforms.Compose([transforms.Resize((299,299)),
