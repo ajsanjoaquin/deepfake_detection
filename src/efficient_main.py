@@ -8,7 +8,7 @@ import torchvision as tv
 from torchvision import transforms
 from time import time
 from .models import model_selection
-from src.utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, save_model
+from src.utils import makedirs, create_logger, tensor2cuda, save_model
 
 import pandas as pd
 from src.argument import parser, print_args
@@ -35,7 +35,7 @@ class Trainer():
         self.args = args
         self.logger = logger
 
-    def train(self, model, tr_loader, va_loader, adv_train=False):
+    def train(self, model, tr_loader, va_loader, device, adv_train=False):
         
         args = self.args
         logger = self.logger
@@ -56,7 +56,7 @@ class Trainer():
         for epoch in range(1, args.max_epoch+1):
             model.train()
             for data, label, paths in tr_loader:
-                data, label = tensor2cuda(data), tensor2cuda(label)
+                data, label = data.to(device), label.to(device)
                 
                 opt.zero_grad()
                 output = model(data)
@@ -99,7 +99,7 @@ class Trainer():
             
 
 
-    def test(self, model, loader, adv_test=False,valid=False):
+    def test(self, model, loader, device, adv_test=False,valid=False):
         model.eval()
         logger = self.logger
         if valid==False:
@@ -114,7 +114,7 @@ class Trainer():
         #turn off backprop (important to avoid cuda memory error)
         with torch.no_grad():
             for data,labels, paths in loader:
-                data, labels = tensor2cuda(data), tensor2cuda(labels)
+                data, labels = data.to(device), labels.to(device)
                 #forward
                 output = model(data)
                 #return probabilities for dataframe
@@ -185,13 +185,12 @@ def main(args):
         tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4)
         te_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
-        trainer.train(model, tr_loader, te_loader, adv_train=args.adv)
+        trainer.train(model, tr_loader, te_loader, device, adv_train=args.adv)
     elif args.todo == 'test':
         te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
         te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
-        std_acc= trainer.test(model, te_loader, adv_test=args.adv)
+        std_acc= trainer.test(model, te_loader, device, adv_test=args.adv)
         print("std acc: %.4f" % (std_acc * 100)
-
     else:
         raise NotImplementedError
     
