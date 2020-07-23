@@ -10,7 +10,7 @@ def parser():
     parser.add_argument('--log_root', default='log', 
         help='the directory to save the logs or other imformations (e.g. images)')
     parser.add_argument('--model_folder', default='checkpoint', help='the directory to save the models')
-    parser.add_argument('--load_checkpoint', default='./model/default/model.pth')
+    parser.add_argument('--load_checkpoint', default=None)
     parser.add_argument('--affix', default='', help='the affix for the save folder')
     parser.add_argument('--output', help='specify location of output')
 
