@@ -54,6 +54,7 @@ class Trainer():
 
         correct=0
         total=0
+        sum_loss = 0
 
         logger.info("Train: %d, Validation: %d" % (len(tr_loader.dataset),len(va_loader.dataset)))
         for epoch in range(1, args.max_epoch+1):
@@ -76,7 +77,7 @@ class Trainer():
                     adv_correct += (adv_pred == label).sum().item()
                     total += label.size(0)
 
-                    adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy()) * 100
+                    #adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy()) * 100
                     #std_acc = -1
                     correct = -1
 
@@ -89,6 +90,8 @@ class Trainer():
                     correct += (pred == label).sum().item()
                     total += label.size(0)
                     #std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
+            if adv_train:
+                adv_acc= (adv_correct/total) * 100
                     
             std_acc= (correct/total) * 100
             tr_loss= (sum_loss/total)
@@ -134,6 +137,7 @@ class Trainer():
         adv_correct = 0
         total = 0
         test_correct=0
+        sum_loss = 0
 
         pathlist=[]
         labellist=[]

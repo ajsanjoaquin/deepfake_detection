@@ -49,6 +49,7 @@ class Trainer():
         valid_acc = 0.0
         best_acc=0
         best_va_acc=0
+        sum_loss = 0
 
         correct=0
         total=0
@@ -112,6 +113,7 @@ class Trainer():
             logger.info("Test Set: %d" % len(loader.dataset))
         total = 0
         test_correct=0
+        sum_loss = 0
 
         pathlist=[]
         labellist=[]
