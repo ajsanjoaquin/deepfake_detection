@@ -124,8 +124,11 @@ def test_full_image_network(video_path, output_path,
             # Face crop with dlib and bounding box scale enlargement
             x, y, size = get_boundingbox(face, width, height)
             cropped_face = image[y:y+size, x:x+size]
+            # resize image
+            dim = (640 , 480)
+            resized = cv2.resize(cropped_face, dim, interpolation = cv2.INTER_LINEAR)
             try:
-              cv2.imwrite(join(output_path,'{}_{}.png'.format(basename(video_path),frame_num)), cropped_face)
+              cv2.imwrite(join(output_path,'{}_{}.png'.format(basename(video_path),frame_num)), resized)
             except:
               pass
     pbar.close()

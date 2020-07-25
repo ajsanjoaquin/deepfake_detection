@@ -42,9 +42,9 @@ class Trainer():
 
         criterion = nn.CrossEntropyLoss()
         opt = torch.optim.Adam(model.parameters(), args.learning_rate, betas=(0.9,0.999), eps=1e-08, weight_decay=args.weight_decay)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, 
-                                                         milestones=[2, 4, 6, 7, 8], 
-                                                         gamma=0.1)
+        #scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, 
+        #                                                 milestones=[2, 4, 6, 7, 8], 
+        #                                                 gamma=0.1)
         acc = 0.0
         valid_acc = 0.0
         best_acc=0
@@ -67,22 +67,28 @@ class Trainer():
                 loss.backward()
                 opt.step()
 
+                batch_loss =loss.item()
+                sum_loss+=batch_loss
+
                 _, pred = torch.max(output.data, dim=1)
                 correct += (pred == label).sum().item()
                 total += label.size(0)
-                std_acc= (correct/total) * 100
+
+                    
+            std_acc= (correct/total) * 100
+            tr_loss= (sum_loss/total)
 
             if va_loader is not None:
                 model.eval()
                 t1 = time()
-                va_acc = self.test(model, va_loader, False, True)
+                va_acc, va_loss = self.test(model, va_loader, False, True, criterion)
                 va_acc = va_acc * 100.0
 
                 t2 = time()
                 logger.info('\n'+'='*20 +' evaluation at epoch: %d '%(epoch) \
                     +'='*20)
-                logger.info('train acc: %.3f %%, validation acc: %.3f %%, spent: %.3f' % (
-                    std_acc, va_acc, t2-t1))
+                logger.info('train acc: %.3f %%, train loss: %.3f %%, validation acc: %.3f %%, valid loss: %.3f %% spent: %.3f' % (
+                    std_acc, tr_loss, va_acc, va_loss, t2-t1))
                 logger.info('='*28+' end of evaluation '+'='*28+'\n')
 
             acc = std_acc
@@ -94,12 +100,12 @@ class Trainer():
                 file_name = os.path.join(args.model_folder, 'checkpoint_%d.pth' % epoch)
                 save_model(model, file_name)
             #for Pytorch 1.0, opt.step() must be called before scheduler.step()
-            scheduler.step()
+            #scheduler.step()
         print('Best Train Acc: {:4f}, Best Valid Acc: {:4f}'.format(best_acc, best_va_acc))
             
 
 
-    def test(self, model, loader, device, adv_test=False,valid=False):
+    def test(self, model, loader, device, adv_test=False,valid=False, criterion=None):
         model.eval()
         logger = self.logger
         if valid==False:
@@ -117,6 +123,8 @@ class Trainer():
                 data, labels = data.to(device), labels.to(device)
                 #forward
                 output = model(data)
+                if criterion is not None:
+                    loss = criterion(output, labels)
                 #return probabilities for dataframe
                 if valid ==False:
                     preds= torch.nn.functional.softmax(output)
@@ -143,6 +151,8 @@ class Trainer():
         
         with open(os.path.join(args.log_root,'%s_out.txt'% args.affix), 'w') as f:
             print('Standard Accuracy: %.4f' % (test_correct / total) ,file=f)
+        if criterion is not None:
+            return test_correct/total, loss.item()
         return test_correct/total
 
 def main(args):
@@ -168,7 +178,7 @@ def main(args):
         print('GPUs: ', torch.cuda.device_count())
         model = nn.DataParallel(model)
     
-    model.to(device)
+    model= model.to(device)
 
     trainer = Trainer(args, logger)
     transform = transforms.Compose([transforms.Resize((299,299)),
