@@ -82,7 +82,7 @@ class Trainer():
             if va_loader is not None:
                 model.eval()
                 t1 = time()
-                va_acc, va_loss = self.test(model, va_loader, False, True, criterion)
+                va_acc, va_loss = self.test(model, va_loader, device, False, True, criterion)
                 va_acc = va_acc * 100.0
 
                 t2 = time()
