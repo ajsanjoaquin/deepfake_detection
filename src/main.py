@@ -76,9 +76,6 @@ class Trainer():
                     _, adv_pred = torch.max(output.data, dim=1)
                     adv_correct += (adv_pred == label).sum().item()
                     total += label.size(0)
-
-                    #adv_acc = evaluate(adv_pred.cpu().numpy(), label.cpu().numpy()) * 100
-                    #std_acc = -1
                     correct = -1
 
 
@@ -89,7 +86,6 @@ class Trainer():
                     _, pred = torch.max(output.data, dim=1)
                     correct += (pred == label).sum().item()
                     total += label.size(0)
-                    #std_acc = evaluate(pred.cpu().numpy(), label.cpu().numpy()) * 100
             if adv_train:
                 adv_acc= (adv_correct/total) * 100
                     
@@ -99,7 +95,7 @@ class Trainer():
             if va_loader is not None:
                 model.eval()
                 t1 = time()
-                va_acc, va_loss, va_adv_acc= self.test(model, va_loader, False, True, criterion)
+                va_acc, va_loss, va_adv_acc= self.test(model, va_loader, device, False, True, criterion)
                 va_acc, va_adv_acc = va_acc * 100.0, va_adv_acc * 100.0
 
                 t2 = time()
