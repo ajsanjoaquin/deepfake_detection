@@ -127,6 +127,7 @@ class Trainer():
                 output = model(data)
                 if criterion is not None:
                     loss = criterion(output, labels)
+                    sum_loss += loss
                 #return probabilities for dataframe
                 if valid ==False:
                     preds= torch.nn.functional.softmax(output)
@@ -155,7 +156,7 @@ class Trainer():
             print('Standard Accuracy: %.4f' % (test_correct / total) ,file=f)
         if criterion is not None:
             return test_correct/total, loss.item()
-        return test_correct/total
+        return test_correct/total, sum_loss/total
 
 def main(args):
     device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
