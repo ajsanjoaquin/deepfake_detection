@@ -6,7 +6,6 @@ from os.path import basename
 from torch.utils.data import DataLoader
 import sys
 from torchvision import transforms
-import matplotlib.pyplot as plt 
 import cv2
 from tqdm import tqdm
 
@@ -79,21 +78,15 @@ for data, label in tqdm(te_loader):
 for i in tqdm(range(len(te_dataset.samples))):
     img = gradlist[i]
     img = np.transpose(img, (1, 2, 0))
+    
     #for normalized only
     #img = img.astype(np.uint8)
 
-    fig=plt.figure()
-    ax = plt.Axes(fig, [0., 0., 1., 1.])
-    ax.set_axis_off()
-    fig.add_axes(ax)
     try:
-        ax.imshow(img)
         if label_dict[labellist[i].item()]=='fake':
-            plt.savefig(os.path.join(fake, '{}_grad_{}'.format(basename(args.output),i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
+            cv2.imwrite(os.path.join(fake, '{}_grad_{}'.format(basename(args.output),i+1)),img)
         else:
-            plt.savefig(os.path.join(real, '{}_grad_{}'.format(basename(args.output),i+1)),bbox_inches = 'tight', pad_inches = 0, dpi=100)
+            cv2.imwrite(os.path.join(real, '{}_grad_{}'.format(basename(args.output),i+1)),img)
     except: 
         pass
-    #CLEAR FIGURE FOR NEXT IMAGE
-    plt.close()
 
