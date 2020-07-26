@@ -202,8 +202,8 @@ def main(args):
     elif args.todo == 'test':
         te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
         te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
-        std_acc= trainer.test(model, te_loader, device, adv_test=args.adv)
-        print("std acc: %.4f" % (std_acc * 100))
+        std_acc, loss= trainer.test(model, te_loader, device, adv_test=args.adv)
+        print("std acc: {:4f}".format(std_acc * 100))
     else:
         raise NotImplementedError
     
