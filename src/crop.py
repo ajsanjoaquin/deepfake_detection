@@ -99,6 +99,7 @@ def test_full_image_network(video_path, output_path,
     assert start_frame < num_frames - 1
     end_frame = end_frame if end_frame else num_frames
     pbar = tqdm(total=end_frame-start_frame)
+    count=0
 
     while reader.isOpened():
         _, image = reader.read()
@@ -126,8 +127,11 @@ def test_full_image_network(video_path, output_path,
             cropped_face = image[y:y+size, x:x+size]
             try:
               cv2.imwrite(join(output_path,'{}_{}.png'.format(basename(video_path),frame_num)), cropped_face)
+              count+=1
             except:
               pass
+        if count == 100:
+            break
     pbar.close()
 
 
