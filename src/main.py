@@ -92,7 +92,7 @@ class Trainer():
                 t2 = time()
                 logger.info('\n'+'='*20 +' evaluation at epoch: %d '%(epoch) \
                     +'='*20)
-                logger.info('train acc: %.3f %%, train loss: %.3f %%, validation acc: %.3f %%, valid loss: %.3f %% spent: %.3f' % (
+                logger.info('train acc: %.3f %%, train loss: %.3f, validation acc: %.3f %%, valid loss: %.3f, spent: %.3f' % (
                     std_acc, tr_loss, va_acc, va_loss, t2-t1))
                 logger.info('='*28+' end of evaluation '+'='*28+'\n')
 
@@ -108,8 +108,8 @@ class Trainer():
             #scheduler.step()
         plt.plot(tr_loss_list, c = 'blue', label = 'Training Loss')
         plt.plot(val_loss_list, c = 'green', label = 'Validation Loss')
-        plt.savefig(os.path.join(args.model_folder,'loss_plot.png'))
         plt.legend(loc="upper right")
+        plt.savefig(os.path.join(args.model_folder,'loss_plot.png'))
         plt.close()
         print('Best Train Acc: {:4f}, Best Valid Acc: {:4f}'.format(best_acc, best_va_acc))
             
