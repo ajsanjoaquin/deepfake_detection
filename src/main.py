@@ -12,6 +12,7 @@ from src.attack import adv_attack
 from src.utils import makedirs, create_logger, save_model
 
 import pandas as pd
+import matplotlib.pyplot as plt
 from src.argument import parser, print_args
 classes={0:'fake',1:'real'}
 class ImageFolderWithPaths(tv.datasets.ImageFolder):
@@ -54,7 +55,9 @@ class Trainer():
 
         correct=0
         total=0
-        sum_loss = 0
+        running_loss = 0.0
+        tr_loss_list = []
+        val_loss_list= []
 
         logger.info("Train: %d, Validation: %d" % (len(tr_loader.dataset),len(va_loader.dataset)))
         for epoch in range(1, args.max_epoch+1):
@@ -78,11 +81,9 @@ class Trainer():
                     total += label.size(0)
                     correct = -1
 
-
                 else:
-                    batch_loss =loss.item()
-                    sum_loss+=batch_loss
-
+                    running_loss += loss.item() * data.size(0)
+                    
                     _, pred = torch.max(output.data, dim=1)
                     correct += (pred == label).sum().item()
                     total += label.size(0)
@@ -90,13 +91,15 @@ class Trainer():
                 adv_acc= (adv_correct/total) * 100
                     
             std_acc= (correct/total) * 100
-            tr_loss= (sum_loss/total)
+            tr_loss= running_loss / len(tr_loader)
+            tr_loss_list.append(tr_loss)
 
             if va_loader is not None:
                 model.eval()
                 t1 = time()
                 va_acc, va_loss, va_adv_acc= self.test(model, va_loader, device, False, True, criterion)
                 va_acc, va_adv_acc = va_acc * 100.0, va_adv_acc * 100.0
+                val_loss_list.append(va_loss)
 
                 t2 = time()
                 logger.info('\n'+'='*20 +' evaluation at epoch: %d '%(epoch) \
@@ -119,6 +122,10 @@ class Trainer():
                 save_model(model, file_name)
             #for Pytorch 1.0, opt.step() must be called before scheduler.step()
             #scheduler.step()
+        plt.plot(tr_loss_list, c = 'blue')
+        plt.plot(val_loss_list, c = 'green')
+        plt.savefig(os.path.join(args.model_folder,'loss_plot.png'))
+        plt.close()
         print('Best Train Acc: {:4f}, Best Valid Acc: {:4f}'.format(best_acc, best_va_acc))
             
 
@@ -133,7 +140,7 @@ class Trainer():
         adv_correct = 0
         total = 0
         test_correct=0
-        sum_loss = 0
+        running_loss = 0.0
 
         pathlist=[]
         labellist=[]
@@ -183,7 +190,7 @@ class Trainer():
 
                     if criterion is not None:
                         loss = criterion(output, labels)
-                        sum_loss += loss
+                        running_loss += loss.item() * data.size(0)
 
                     #return probabilities for dataframe
                     if valid ==False:
@@ -214,7 +221,7 @@ class Trainer():
             print('Standard Accuracy: %.4f, Adversarial Accuracy: %.4f' % (test_correct / total, adv_correct / total) ,file=f)
         test_loss=0
         if criterion is not None:
-            test_loss= sum_loss/total
+            test_loss= running_loss / len(loader)
 
         return test_correct/total , test_loss , adv_correct / total
 

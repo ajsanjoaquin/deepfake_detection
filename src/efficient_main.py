@@ -13,6 +13,7 @@ from src.utils import makedirs, create_logger, tensor2cuda, save_model
 import pandas as pd
 from src.argument import parser, print_args
 from efficientnet_pytorch import EfficientNet
+import matplotlib.pyplot as plt
 
 classes={0:'fake',1:'real'}
 class ImageFolderWithPaths(tv.datasets.ImageFolder):
@@ -49,7 +50,9 @@ class Trainer():
         valid_acc = 0.0
         best_acc=0
         best_va_acc=0
-        sum_loss = 0
+        running_loss = 0.0
+        tr_loss_list = []
+        val_loss_list= []
 
         correct=0
         total=0
@@ -68,8 +71,7 @@ class Trainer():
                 loss.backward()
                 opt.step()
 
-                batch_loss =loss.item()
-                sum_loss+=batch_loss
+                running_loss += loss.item() * data.size(0)
 
                 _, pred = torch.max(output.data, dim=1)
                 correct += (pred == label).sum().item()
@@ -77,13 +79,15 @@ class Trainer():
 
                     
             std_acc= (correct/total) * 100
-            tr_loss= (sum_loss/total)
+            tr_loss= running_loss / len(tr_loader)
+            tr_loss_list.append(tr_loss)
 
             if va_loader is not None:
                 model.eval()
                 t1 = time()
                 va_acc, va_loss = self.test(model, va_loader, device, False, True, criterion)
                 va_acc = va_acc * 100.0
+                val_loss_list.append(va_loss)
 
                 t2 = time()
                 logger.info('\n'+'='*20 +' evaluation at epoch: %d '%(epoch) \
@@ -102,6 +106,10 @@ class Trainer():
                 save_model(model, file_name)
             #for Pytorch 1.0, opt.step() must be called before scheduler.step()
             #scheduler.step()
+        plt.plot(tr_loss_list, c = 'blue')
+        plt.plot(val_loss_list, c = 'green')
+        plt.savefig(os.path.join(args.model_folder,'loss_plot.png'))
+        plt.close()
         print('Best Train Acc: {:4f}, Best Valid Acc: {:4f}'.format(best_acc, best_va_acc))
             
 
@@ -113,7 +121,7 @@ class Trainer():
             logger.info("Test Set: %d" % len(loader.dataset))
         total = 0
         test_correct=0
-        sum_loss = 0
+        running_loss = 0.0
 
         pathlist=[]
         labellist=[]
@@ -127,7 +135,7 @@ class Trainer():
                 output = model(data)
                 if criterion is not None:
                     loss = criterion(output, labels)
-                    sum_loss += loss.item()
+                    running_loss += loss.item() * data.size(0)
                 #return probabilities for dataframe
                 if valid ==False:
                     preds= torch.nn.functional.softmax(output)
@@ -154,7 +162,7 @@ class Trainer():
         with open(os.path.join(args.log_root,'%s_out.txt'% args.affix), 'w') as f:
             print('Standard Accuracy: %.4f' % (test_correct / total) ,file=f)
         if criterion is not None:
-            return test_correct/total, sum_loss/total
+            return test_loss= running_loss / len(loader)
         return test_correct/total, 0
 
 def main(args):
