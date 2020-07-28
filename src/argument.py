@@ -4,6 +4,7 @@ def parser():
     parser = argparse.ArgumentParser(description='Video Summarization')
     parser.add_argument('--todo', choices=['train', 'valid', 'test', 'visualize'], default='train',
         help='what behavior want to do: train | valid | test | visualize')
+    parser.add_argument('--model', choices=['xception', 'enet'], help='what model to use')
     parser.add_argument('--data_root', default='/content/train', 
         help='train or test dataset root')
     parser.add_argument('--val_root', help='validation dataset root')

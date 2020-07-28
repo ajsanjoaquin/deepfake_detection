@@ -8,12 +8,13 @@ import torchvision as tv
 from torchvision import transforms
 from time import time
 from .models import model_selection
-from src.attack import adv_attack
-from src.utils import makedirs, create_logger, save_model
+from src.utils import makedirs, create_logger, tensor2cuda, save_model
 
 import pandas as pd
-import matplotlib.pyplot as plt
 from src.argument import parser, print_args
+from efficientnet_pytorch import EfficientNet
+import matplotlib.pyplot as plt
+
 classes={0:'fake',1:'real'}
 class ImageFolderWithPaths(tv.datasets.ImageFolder):
     """Custom dataset that includes image file paths. Extends
@@ -36,13 +37,10 @@ class Trainer():
         self.logger = logger
 
     def train(self, model, tr_loader, va_loader, device, adv_train=False):
-        #broken for adv
         
         args = self.args
         logger = self.logger
-        #child=model.children()[0]
-        #for param in child.parameters():
-        #param.requires_grad = False
+
         criterion = nn.CrossEntropyLoss()
         opt = torch.optim.Adam(model.parameters(), args.learning_rate, betas=(0.9,0.999), eps=1e-08, weight_decay=args.weight_decay)
         #scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, 
@@ -52,14 +50,13 @@ class Trainer():
         valid_acc = 0.0
         best_acc=0
         best_va_acc=0
-
-        correct=0
-        total=0
         running_loss = 0.0
         tr_loss_list = []
         val_loss_list= []
 
-        logger.info("Train: %d, Validation: %d" % (len(tr_loader.dataset),len(va_loader.dataset)))
+        correct=0
+        total=0
+
         for epoch in range(1, args.max_epoch+1):
             model.train()
             for data, label, paths in tr_loader:
@@ -67,28 +64,19 @@ class Trainer():
                 
                 opt.zero_grad()
                 output = model(data)
-                if adv_train:
-                    output = adv_attack (data, label, model, args.epsilon)
 
                 loss = criterion(output, label)
+
                 
                 loss.backward()
                 opt.step()
-                
-                if adv_train:
-                    _, adv_pred = torch.max(output.data, dim=1)
-                    adv_correct += (adv_pred == label).sum().item()
-                    total += label.size(0)
-                    correct = -1
 
-                else:
-                    running_loss += loss.item() * data.size(0)
-                    
-                    _, pred = torch.max(output.data, dim=1)
-                    correct += (pred == label).sum().item()
-                    total += label.size(0)
-            if adv_train:
-                adv_acc= (adv_correct/total) * 100
+                running_loss += loss.item() * data.size(0)
+
+                _, pred = torch.max(output.data, dim=1)
+                correct += (pred == label).sum().item()
+                total += label.size(0)
+
                     
             std_acc= (correct/total) * 100
             tr_loss= running_loss / len(tr_loader)
@@ -97,8 +85,8 @@ class Trainer():
             if va_loader is not None:
                 model.eval()
                 t1 = time()
-                va_acc, va_loss, va_adv_acc= self.test(model, va_loader, device, False, True, criterion)
-                va_acc, va_adv_acc = va_acc * 100.0, va_adv_acc * 100.0
+                va_acc, va_loss = self.test(model, va_loader, device, False, True, criterion)
+                va_acc = va_acc * 100.0
                 val_loss_list.append(va_loss)
 
                 t2 = time()
@@ -108,12 +96,8 @@ class Trainer():
                     std_acc, tr_loss, va_acc, va_loss, t2-t1))
                 logger.info('='*28+' end of evaluation '+'='*28+'\n')
 
-            if adv_train:
-                acc = adv_acc
-                valid_acc = va_adv_acc
-            else:
-                acc = std_acc
-                valid_acc = va_acc
+            acc = std_acc
+            valid_acc = va_acc
 
             if acc >= best_acc and valid_acc >= best_va_acc:
                 best_acc=acc
@@ -122,22 +106,20 @@ class Trainer():
                 save_model(model, file_name)
             #for Pytorch 1.0, opt.step() must be called before scheduler.step()
             #scheduler.step()
-        plt.plot(tr_loss_list, c = 'blue')
-        plt.plot(val_loss_list, c = 'green')
+        plt.plot(tr_loss_list, c = 'blue', label = 'Training Loss')
+        plt.plot(val_loss_list, c = 'green', label = 'Validation Loss')
         plt.savefig(os.path.join(args.model_folder,'loss_plot.png'))
+        plt.legend(loc="upper right")
         plt.close()
         print('Best Train Acc: {:4f}, Best Valid Acc: {:4f}'.format(best_acc, best_va_acc))
             
 
 
-    def test(self, model, loader, device, adv_test=False,valid=False, criterion= None):
-        #TODo make an adv
-        # adv_test is False, return adv_acc as -1 
+    def test(self, model, loader, device, adv_test=False,valid=False, criterion=None):
         model.eval()
         logger = self.logger
         if valid==False:
             logger.info("Test Set: %d" % len(loader.dataset))
-        adv_correct = 0
         total = 0
         test_correct=0
         running_loss = 0.0
@@ -145,66 +127,27 @@ class Trainer():
         pathlist=[]
         labellist=[]
         predlist=[]
-        
-        if adv_test:
+
+        #turn off backprop (important to avoid cuda memory error)
+        with torch.no_grad():
             for data,labels, paths in loader:
                 data, labels = data.to(device), labels.to(device)
                 #forward
                 output = model(data)
+                if criterion is not None:
+                    loss = criterion(output, labels)
+                    running_loss += loss.item() * data.size(0)
                 #return probabilities for dataframe
                 if valid ==False:
                     preds= torch.nn.functional.softmax(output)
+                    predlist.extend(preds)
 
                 _, pred = torch.max(output.data, 1)
 
                 total += labels.size(0)
                 test_correct += (pred == labels).sum().item()
-
-
-                #if already incorrect, don't attack it anymore
-                #fix for more than 1 batch size
-                if (pred !=labels).item():
-                    continue
-
-                # Re-classify the perturbed image
-                adv_data = adv_attack (data, labels, model, args.epsilon)
-                adv_out = model(adv_data)
-                if valid ==False:
-                    preds= torch.nn.functional.softmax(adv_out)
-                _, adv_pred = torch.max(adv_out.data , dim=1)
-
-                total += labels.size(0)
-                adv_correct += (adv_pred == labels).sum().item()
-
                 pathlist.extend(paths)
                 labellist.extend(labels)
-                if valid==False:
-                    predlist.extend(preds)
-        else:
-            #turn off backprop (important to avoid cuda memory error)
-            with torch.no_grad():
-                for data,labels, paths in loader:
-                    data, labels = data.to(device), labels.to(device)
-                    #forward
-                    output = model(data)
-
-                    if criterion is not None:
-                        loss = criterion(output, labels)
-                        running_loss += loss.item() * data.size(0)
-
-                    #return probabilities for dataframe
-                    if valid ==False:
-                        preds= torch.nn.functional.softmax(output)
-
-                    _, pred = torch.max(output.data, 1)
-
-                    total += labels.size(0)
-                    test_correct += (pred == labels).sum().item()
-                    adv_correct = -total
-                    pathlist.extend(paths)
-                    labellist.extend(labels)
-                    if valid==False:
-                        predlist.extend(preds)
                 
 
         if valid==False:
@@ -218,12 +161,10 @@ class Trainer():
             results.to_csv(os.path.join(args.log_root,'%s_results.csv'%args.affix))
         
         with open(os.path.join(args.log_root,'%s_out.txt'% args.affix), 'w') as f:
-            print('Standard Accuracy: %.4f, Adversarial Accuracy: %.4f' % (test_correct / total, adv_correct / total) ,file=f)
-        test_loss=0
+            print('Standard Accuracy: %.4f' % (test_correct / total) ,file=f)
         if criterion is not None:
-            test_loss= running_loss / len(loader)
-
-        return test_correct/total , test_loss , adv_correct / total
+            return test_loss= running_loss / len(loader)
+        return test_correct/total, 0
 
 def main(args):
     device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -236,8 +177,14 @@ def main(args):
     logger = create_logger(args.log_root, args.todo, 'info')
 
     print_args(args, logger)
-    model, *_ = model_selection(modelname='xception', num_out_classes=2, init_checkpoint=args.init_load)
-    if args.init_load is None:
+    if args.model == 'enet':
+        model = EfficientNet.from_pretrained('efficientnet-b5', num_classes = 2)
+    elif args.model == 'xception':
+        model, *_ = model_selection(modelname='xception', num_out_classes=2, init_checkpoint=args.init_load)
+    else: 
+        raise NotImplementedError
+    
+    if args.load_checkpoint is not None:
         if device.type=='cpu':
             checkpoint = torch.load(args.load_checkpoint,map_location=torch.device('cpu'))
         else:
@@ -248,7 +195,7 @@ def main(args):
         print('GPUs: ', torch.cuda.device_count())
         model = nn.DataParallel(model)
     
-    model.to(device)
+    model= model.to(device)
 
     trainer = Trainer(args, logger)
     transform = transforms.Compose([transforms.Resize((299,299)),
@@ -258,6 +205,8 @@ def main(args):
     if args.todo == 'train':
         train_set= ImageFolderWithPaths(args.data_root,transform=transform)
         val_set=ImageFolderWithPaths(args.val_root,transform=transform)
+        logger.info('Train Total: %d'%len(train_set))
+        logger.info('Val Total: %d'%len(val_set))
         logger.info( "Classes: {}".format(' '.join(map(str, train_set.classes))))
 
         tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4)
@@ -267,9 +216,8 @@ def main(args):
     elif args.todo == 'test':
         te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
         te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
-        std_acc, loss, adv_acc = trainer.test(model, te_loader, device, adv_test=args.adv)
-        print("std acc: {:4f}, adv acc: {:4f}".format(std_acc * 100, adv_acc * 100))
-
+        std_acc, loss= trainer.test(model, te_loader, device, adv_test=args.adv)
+        print("std acc: {:4f}".format(std_acc * 100))
     else:
         raise NotImplementedError
     
