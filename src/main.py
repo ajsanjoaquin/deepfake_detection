@@ -165,7 +165,7 @@ class Trainer():
         with open(os.path.join(args.log_root,'%s_out.txt'% args.affix), 'w') as f:
             print('Standard Accuracy: %.4f' % (test_correct / total) ,file=f)
         if criterion is not None:
-            test_loss= running_loss / len(loader)
+            test_loss= running_loss / total
             return test_correct/total, test_loss
         return test_correct/total, 0
 
