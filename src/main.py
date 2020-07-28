@@ -109,6 +109,7 @@ class Trainer():
         plt.plot(tr_loss_list, c = 'blue', label = 'Training Loss')
         plt.plot(val_loss_list, c = 'green', label = 'Validation Loss')
         plt.xticks(range(1, args.max_epoch+1))
+        plt.ylim((0,1))
         plt.legend(loc="upper right")
         plt.savefig(os.path.join(args.model_folder,'loss_plot.png'))
         plt.close()
@@ -137,7 +138,7 @@ class Trainer():
                 output = model(data)
                 if criterion is not None:
                     loss = criterion(output, labels)
-                    running_loss += loss.item()
+                    running_loss += loss.item() * data.size(0)
                 #return probabilities for dataframe
                 if valid ==False:
                     preds= torch.nn.functional.softmax(output)
