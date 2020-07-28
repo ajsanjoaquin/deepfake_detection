@@ -84,9 +84,9 @@ for i in tqdm(range(len(te_dataset.samples))):
 
     try:
         if label_dict[labellist[i].item()]=='fake':
-            cv2.imwrite(os.path.join(fake, '{}_grad_{}'.format(basename(args.output),i+1)),img)
+            cv2.imwrite(os.path.join(fake, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
         else:
-            cv2.imwrite(os.path.join(real, '{}_grad_{}'.format(basename(args.output),i+1)),img)
+            cv2.imwrite(os.path.join(real, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
     except: 
         pass
 
