@@ -43,6 +43,7 @@ def parser():
     
     parser.add_argument('--adv_train', action='store_true')
     parser.add_argument('--init_load', default= None)
+    parser.add_argument('--norm', default= None)
 
     return parser.parse_args()
 

@@ -57,17 +57,17 @@ for data, label in tqdm(te_loader):
     VBP = VanillaBackprop(model)
     grad = VBP.generate_gradients(data, x)
     
-    #normalization
-    '''grad_flat = grad.view(grad.shape[0], -1)
-    mean = grad_flat.mean(1, keepdim=True).unsqueeze(2).unsqueeze(3)
-    std = grad_flat.std(1, keepdim=True).unsqueeze(2).unsqueeze(3)
+    if args.norm:
+        grad_flat = grad.view(grad.shape[0], -1)
+        mean = grad_flat.mean(1, keepdim=True).unsqueeze(2).unsqueeze(3)
+        std = grad_flat.std(1, keepdim=True).unsqueeze(2).unsqueeze(3)
 
-    mean = mean.repeat(1, 1, data.shape[2], data.shape[3])
-    std = std.repeat(1, 1, data.shape[2], data.shape[3])
+        mean = mean.repeat(1, 1, data.shape[2], data.shape[3])
+        std = std.repeat(1, 1, data.shape[2], data.shape[3])
 
-    grad = torch.max(torch.min(grad, mean+3*std), mean-3*std)
-    grad -= grad.min()
-    grad /= grad.max()'''
+        grad = torch.max(torch.min(grad, mean+3*std), mean-3*std)
+        grad -= grad.min()
+        grad /= grad.max()
     #unnormalized
     grad = grad.cpu().numpy().squeeze() *255 # (N, 28, 28)
 
@@ -80,13 +80,11 @@ for i in tqdm(range(len(te_dataset.samples))):
     img = np.transpose(img, (1, 2, 0))
     
     #for normalized only
-    #img = img.astype(np.uint8)
+    if args.norm:
+        img = img.astype(np.uint8)
 
-    try:
-        if label_dict[labellist[i].item()]=='fake':
-            cv2.imwrite(os.path.join(fake, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
-        else:
-            cv2.imwrite(os.path.join(real, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
-    except: 
-        pass
+    if label_dict[labellist[i].item()]=='fake':
+        cv2.imwrite(os.path.join(fake, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
+    else:
+        cv2.imwrite(os.path.join(real, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
 
