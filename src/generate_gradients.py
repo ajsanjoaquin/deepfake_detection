@@ -45,48 +45,81 @@ model.load_state_dict(checkpoint)
 gradlist=[]
 labellist=[]
 label_dict = {0:'fake',1:'real'}
+global_max = 0
+global_min = 0
 
+if args.normalize == 'global' or args.normalize == 'local':
+  for data, label in tqdm(te_loader):
+      data, label = tensor2cuda(data), tensor2cuda(label)
+      tf=np.ones(args.batch_size, dtype=np.int64)
+      x=torch.from_numpy(tf)
+      x=x.cuda()
 
-for data, label in tqdm(te_loader):
+      VBP = VanillaBackprop(model)
+      grad = VBP.generate_gradients(data, x)
+      
+      grad = grad.cpu().numpy().squeeze() # (batch_size, channels, 288, 288)
+      if args.normalize == 'local':
+        '''
+        get local extremes for each image array 
+        then normalize image array with their corresponding local extremes
+        '''
+        max=np.amax(grad, axis = (1,2,3))
+        min=np.amin(grad, axis = (1,2,3))
+        max=max.reshape([args.batch_size,1,1,1])
+        min=min.reshape([args.batch_size,1,1,1])
+        normalized = np.divide((np.subtract(grad, min)), (max - min))
+        labellist.extend(label)
+        gradlist.extend(normalized)
+
+        labellist.extend(label)
+        gradlist.extend(normalized)
+
+      elif args.normalize == 'global':
+        max=np.amax(grad)
+        min=np.amin(grad)
+        if max > global_max:
+          global_max = max
+        if min > global_min:
+          global_min = min
+
+elif args.normalize == 'sign':
+  for data, label in tqdm(te_loader):
+      data, label = tensor2cuda(data), tensor2cuda(label)
+      tf=np.ones(args.batch_size, dtype=np.int64)
+      x=torch.from_numpy(tf)
+      x=x.cuda()
+
+      VBP = VanillaBackprop(model)
+      grad = VBP.generate_gradients(data, x)
+      
+      grad = grad.cpu().numpy().squeeze()
+      normalized=np.sign(grad) * args.epsilon
+      labellist.extend(label)
+      gradlist.extend(normalized)
+
+else: raise NotImplementedError
+
+#second pass on data to normalize it after finding global extremes
+if args.normalize == 'global':
+  for data, label in tqdm(te_loader):
+
     data, label = tensor2cuda(data), tensor2cuda(label)
-    #make every target label real
-    tf=np.ones(len(data), dtype=np.int64)
+    tf=np.ones(args.batch_size, dtype=np.int64)
     x=torch.from_numpy(tf)
     x=x.cuda()
 
     VBP = VanillaBackprop(model)
     grad = VBP.generate_gradients(data, x)
-    
-    #normalization
-    '''grad_flat = grad.view(grad.shape[0], -1)
-    mean = grad_flat.mean(1, keepdim=True).unsqueeze(2).unsqueeze(3)
-    std = grad_flat.std(1, keepdim=True).unsqueeze(2).unsqueeze(3)
+    grad = grad.cpu().numpy().squeeze()
 
-    mean = mean.repeat(1, 1, data.shape[2], data.shape[3])
-    std = std.repeat(1, 1, data.shape[2], data.shape[3])
-
-    grad = torch.max(torch.min(grad, mean+3*std), mean-3*std)
-    grad -= grad.min()
-    grad /= grad.max()'''
-    #unnormalized
-    grad = grad.cpu().numpy().squeeze() *255 # (N, 28, 28)
-
+    normalized = (grad - global_min) / (global_max - global_min)
     labellist.extend(label)
-    gradlist.extend(grad)
+    gradlist.extend(normalized)
 
-#do for each image
+# saving as np array
 for i in tqdm(range(len(te_dataset.samples))):
-    img = gradlist[i]
-    img = np.transpose(img, (1, 2, 0))
-    
-    #for normalized only
-    #img = img.astype(np.uint8)
-
-    try:
-        if label_dict[labellist[i].item()]=='fake':
-            cv2.imwrite(os.path.join(fake, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
-        else:
-            cv2.imwrite(os.path.join(real, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
-    except: 
-        pass
-
+    if label_dict[labellist[i].item()]=='fake':
+        np.save(os.path.join(fake, '{}_{}'.format(basename(args.output),i+1)), gradlist[i])
+    else:
+        np.save(os.path.join(real, '{}_{}'.format(basename(args.output),i+1)), gradlist[i])
