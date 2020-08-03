@@ -24,7 +24,7 @@ real=os.path.join(img_folder,'real')
 folders=[img_folder,fake,real]
 for folder in folders:
     if not os.path.isdir(folder):
-        os.mkdir(folder)
+        os.makedirs(folder)
 ################################################
 test_transform = transforms.Compose([transforms.Resize((299,299)),
           transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
