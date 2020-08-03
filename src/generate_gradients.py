@@ -51,7 +51,7 @@ global_min = 0
 if args.normalize == 'global' or args.normalize == 'local':
   for data, label in tqdm(te_loader):
       data, label = tensor2cuda(data), tensor2cuda(label)
-      tf=np.ones(args.batch_size, dtype=np.int64)
+      tf=np.ones(len(data), dtype=np.int64)
       x=torch.from_numpy(tf)
       x=x.cuda()
 
@@ -66,8 +66,8 @@ if args.normalize == 'global' or args.normalize == 'local':
         '''
         max=np.amax(grad, axis = (1,2,3))
         min=np.amin(grad, axis = (1,2,3))
-        max=max.reshape([args.batch_size,1,1,1])
-        min=min.reshape([args.batch_size,1,1,1])
+        max=max.reshape([len(data),1,1,1])
+        min=min.reshape([len(data),1,1,1])
         normalized = np.divide((np.subtract(grad, min)), (max - min))
         labellist.extend(label)
         gradlist.extend(normalized)
@@ -86,7 +86,7 @@ if args.normalize == 'global' or args.normalize == 'local':
 elif args.normalize == 'sign':
   for data, label in tqdm(te_loader):
       data, label = tensor2cuda(data), tensor2cuda(label)
-      tf=np.ones(args.batch_size, dtype=np.int64)
+      tf=np.ones(len(data), dtype=np.int64)
       x=torch.from_numpy(tf)
       x=x.cuda()
 
@@ -105,7 +105,7 @@ if args.normalize == 'global':
   for data, label in tqdm(te_loader):
 
     data, label = tensor2cuda(data), tensor2cuda(label)
-    tf=np.ones(args.batch_size, dtype=np.int64)
+    tf=np.ones(len(data), dtype=np.int64)
     x=torch.from_numpy(tf)
     x=x.cuda()
 
