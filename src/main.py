@@ -1,8 +1,10 @@
 import os
+import os.path.join as join
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import TensorDataset, DataLoader
 
 import torchvision as tv
 from torchvision import transforms
@@ -25,6 +27,21 @@ class ImageFolderWithPaths(tv.datasets.ImageFolder):
     def __getitem__(self, index):
         # this is what ImageFolder normally returns 
         original_tuple = super(ImageFolderWithPaths, self).__getitem__(index)
+        # the image file path
+        path = self.imgs[index][0]
+        # make a new tuple that includes original and the path
+        tuple_with_path = (original_tuple + (path,))
+        return tuple_with_path
+
+class TensorDatasetWithPaths(torch.utils.data.TensorDataset):
+    """Custom dataset that includes image file paths. Extends
+    torchvision.datasets.ImageFolder
+    """
+
+    # override the __getitem__ method. this is the method that dataloader calls
+    def __getitem__(self, index):
+        # this is what ImageFolder normally returns 
+        original_tuple = super(TensorDatasetWithPaths, self).__getitem__(index)
         # the image file path
         path = self.imgs[index][0]
         # make a new tuple that includes original and the path
@@ -86,6 +103,7 @@ class Trainer():
                 model.eval()
                 t1 = time()
                 va_acc, va_loss = self.test(model, va_loader, device, False, True, criterion)
+
                 va_acc = va_acc * 100.0
                 val_loss_list.append(va_loss)
 
@@ -206,18 +224,54 @@ def main(args):
                 ])
 
     if args.todo == 'train':
-        train_set= ImageFolderWithPaths(args.data_root,transform=transform)
-        val_set=ImageFolderWithPaths(args.val_root,transform=transform)
+        if args.array:
+            #BUILD TRAIN SET
+            train_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(args.data_root)]
+            train_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(args.data_root)]
+
+            train_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(train_fake))]
+            train_target_real=[np.ones(1, dtype=np.int64) for i in range(len(train_real))]
+
+            train_array=torch.Tensor(train_fake.extend(train_real))
+            train_targets=torch.Tensor(train_target_fake.extend(train_target_real))
+            train_set = TensorDatasetWithPaths(train_array,train_targets)
+
+            #BUILD VAL SET
+            val_fake=[np.load(join(args.val_root,'fake',array)) for array in os.listdir(args.val_root)]
+            val_real=[np.load(join(args.val_root,'real',array)) for array in os.listdir(args.val_root)]
+
+            val_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(val_fake))]
+            val_target_real=[np.ones(1, dtype=np.int64) for i in range(len(val_real))]
+
+            val_array=torch.Tensor(val_fake.extend(val_real))
+            val_targets=torch.Tensor(val_target_fake.extend(val_target_real))
+            val_set = TensorDatasetWithPaths(val_array, val_targets)
+        else:
+            train_set= ImageFolderWithPaths(args.data_root,transform=transform)
+            val_set=ImageFolderWithPaths(args.val_root,transform=transform)
         logger.info('Train Total: %d'%len(train_set))
         logger.info('Val Total: %d'%len(val_set))
-        logger.info( "Classes: {}".format(' '.join(map(str, train_set.classes))))
+        #logger.info( "Classes: {}".format(' '.join(map(str, train_set.classes))))
 
         tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4)
         te_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
         trainer.train(model, tr_loader, te_loader, device, adv_train=args.adv)
     elif args.todo == 'test':
-        te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
+        if args.array:
+            #BUILD TEST SET
+            test_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(args.data_root)]
+            test_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(args.data_root)]
+
+            test_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(test_fake))]
+            test_target_real=[np.ones(1, dtype=np.int64) for i in range(len(test_real))]
+
+            test_array=torch.Tensor(test_fake.extend(test_real))
+            test_targets=torch.Tensor(test_target_fake.extend(test_target_real))
+            te_dataset = TensorDatasetWithPaths(test_array,test_targets)
+        else:
+            te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
+            
         te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
         std_acc, loss= trainer.test(model, te_loader, device, adv_test=args.adv)
         print("std acc: {:4f}".format(std_acc * 100))
