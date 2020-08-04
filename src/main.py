@@ -294,8 +294,8 @@ class Trainer():
 
 class MyDataset(Dataset):
     def __init__(self, data, target, transform=None):
-        self.data = [torch.from_numpy(array).float() for array in data]
-        self.target = [torch.from_numpy(array).long() for array in target]
+        self.data = torch.Tensor(data)
+        self.target = torch.Tensor(target)
         self.transform = transform
         
     def __getitem__(self, index):
@@ -342,18 +342,17 @@ def main(args):
     model= model.to(device)
 
     trainer = Trainer(args, logger)
-    transform = transforms.Compose([transforms.Resize((299,299)),
-            transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-                ])
 
     if args.todo == 'train':
         if args.array:
+            transform = transforms.Compose([ transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+                        ])
             #BUILD TRAIN SET
             train_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(join(args.data_root, 'fake'))]
             train_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(join(args.data_root, 'real'))]
 
-            train_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(train_fake))]
-            train_target_real=[np.ones(1, dtype=np.int64) for i in range(len(train_real))]
+            train_target_fake=[np.zeros(1, dtype=np.float64) for i in range(len(train_fake))]
+            train_target_real=[np.ones(1, dtype=np.float64) for i in range(len(train_real))]
 
             train_fake.extend(train_real)
             #train_array=torch.Tensor(train_fake)
@@ -367,8 +366,8 @@ def main(args):
             val_fake=[np.load(join(args.val_root,'fake',array)) for array in os.listdir(join(args.val_root, 'fake'))]
             val_real=[np.load(join(args.val_root,'real',array)) for array in os.listdir(join(args.val_root, 'real'))]
 
-            val_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(val_fake))]
-            val_target_real=[np.ones(1, dtype=np.int64) for i in range(len(val_real))]
+            val_target_fake=[np.zeros(1, dtype=np.float64) for i in range(len(val_fake))]
+            val_target_real=[np.ones(1, dtype=np.float64) for i in range(len(val_real))]
 
             val_fake.extend(val_real)
             #val_array=torch.Tensor(val_fake)
@@ -378,6 +377,9 @@ def main(args):
 
             val_set = MyDataset(val_fake, val_target_fake, transform=transform)
         else:
+            transform = transforms.Compose([transforms.Resize((299,299)),
+                    transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+                        ])
             train_set= ImageFolderWithPaths(args.data_root,transform=transform)
             val_set=ImageFolderWithPaths(args.val_root,transform=transform)
         logger.info('Train Total: %d'%len(train_set))
