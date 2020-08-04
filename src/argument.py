@@ -44,7 +44,7 @@ def parser():
     parser.add_argument('--adv_train', action='store_true')
     parser.add_argument('--init_load', default= None)
     parser.add_argument('--normalize', choices=['local','global','sign'],default = None, help = 'For generating gradients script; type of normalization')
-
+    parser.add_argument('--array', default= None, help= 'set to True to when using numpy arrays for training and testing model')
     return parser.parse_args()
 
 def print_args(args, logger=None):

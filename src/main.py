@@ -1,5 +1,5 @@
 import os
-import os.path.join as join
+from os.path import join
 import numpy as np
 import torch
 import torch.nn as nn
