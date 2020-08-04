@@ -232,8 +232,10 @@ def main(args):
             train_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(train_fake))]
             train_target_real=[np.ones(1, dtype=np.int64) for i in range(len(train_real))]
 
-            train_array=torch.Tensor(train_fake.extend(train_real))
-            train_targets=torch.Tensor(train_target_fake.extend(train_target_real))
+            train_fake.extend(train_real)
+            train_array=torch.Tensor(train_fake)
+            train_target_fake.extend(train_target_real)
+            train_targets=torch.Tensor(train_target_fake)
             train_set = TensorDatasetWithPaths(train_array,train_targets)
 
             #BUILD VAL SET
@@ -243,8 +245,10 @@ def main(args):
             val_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(val_fake))]
             val_target_real=[np.ones(1, dtype=np.int64) for i in range(len(val_real))]
 
-            val_array=torch.Tensor(val_fake.extend(val_real))
-            val_targets=torch.Tensor(val_target_fake.extend(val_target_real))
+            val_fake.extend(val_real)
+            val_array=torch.Tensor(val_fake)
+            val_target_fake.extend(val_target_real)
+            val_targets=torch.Tensor(val_target_fake)
             val_set = TensorDatasetWithPaths(val_array, val_targets)
         else:
             train_set= ImageFolderWithPaths(args.data_root,transform=transform)
@@ -266,8 +270,10 @@ def main(args):
             test_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(test_fake))]
             test_target_real=[np.ones(1, dtype=np.int64) for i in range(len(test_real))]
 
-            test_array=torch.Tensor(test_fake.extend(test_real))
-            test_targets=torch.Tensor(test_target_fake.extend(test_target_real))
+            test_fake.extend(test_real)
+            test_array=torch.Tensor(test_fake)
+            test_target_fake.extend(test_target_real)
+            test_targets=torch.Tensor(test_target_fake)
             te_dataset = TensorDatasetWithPaths(test_array,test_targets)
         else:
             te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
