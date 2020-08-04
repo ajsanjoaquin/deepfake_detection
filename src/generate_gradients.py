@@ -72,9 +72,6 @@ if args.normalize == 'global' or args.normalize == 'local':
         labellist.extend(label)
         gradlist.extend(normalized)
 
-        labellist.extend(label)
-        gradlist.extend(normalized)
-
       elif args.normalize == 'global':
         max=np.amax(grad)
         min=np.amin(grad)
