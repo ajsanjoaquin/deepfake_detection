@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import Dataset, DataLoader
 
 import torchvision as tv
 from torchvision import transforms
@@ -292,6 +292,24 @@ class Trainer():
             return test_correct/total, test_loss
         return test_correct/total, 0
 
+class MyDataset(Dataset):
+    def __init__(self, data, target, transform=None):
+        self.data = [torch.from_numpy(array).float() for array in data]
+        self.target = [torch.from_numpy(array).long() for array in target]
+        self.transform = transform
+        
+    def __getitem__(self, index):
+        x = self.data[index]
+        y = self.target[index]
+        
+        if self.transform:
+            x = self.transform(x)
+        
+        return x, y
+    
+    def __len__(self):
+        return len(self.data)
+
 def main(args):
     device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     makedirs(args.log_root)
@@ -338,10 +356,12 @@ def main(args):
             train_target_real=[np.ones(1, dtype=np.int64) for i in range(len(train_real))]
 
             train_fake.extend(train_real)
-            train_array=torch.Tensor(train_fake)
+            #train_array=torch.Tensor(train_fake)
             train_target_fake.extend(train_target_real)
-            train_targets=torch.Tensor(train_target_fake, dtype=torch.long)
-            train_set = TensorDataset(train_array,train_targets)
+            #train_targets=torch.Tensor(train_target_fake, dtype=torch.long)
+            #train_set = TensorDataset(train_array,train_targets)
+
+            train_set = MyDataset(train_fake, train_target_fake, transform=transform)
 
             #BUILD VAL SET
             val_fake=[np.load(join(args.val_root,'fake',array)) for array in os.listdir(join(args.val_root, 'fake'))]
@@ -351,10 +371,12 @@ def main(args):
             val_target_real=[np.ones(1, dtype=np.int64) for i in range(len(val_real))]
 
             val_fake.extend(val_real)
-            val_array=torch.Tensor(val_fake)
+            #val_array=torch.Tensor(val_fake)
             val_target_fake.extend(val_target_real)
-            val_targets=torch.Tensor(val_target_fake, dtype=torch.long)
-            val_set = TensorDataset(val_array, val_targets)
+            #val_targets=torch.Tensor(val_target_fake, dtype=torch.long)
+            #val_set = TensorDataset(val_array, val_targets)
+
+            val_set = MyDataset(val_fake, val_target_fake, transform=transform)
         else:
             train_set= ImageFolderWithPaths(args.data_root,transform=transform)
             val_set=ImageFolderWithPaths(args.val_root,transform=transform)
