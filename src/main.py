@@ -195,7 +195,7 @@ class Trainer():
         for epoch in range(1, args.max_epoch+1):
             model.train()
             for data, label in tr_loader:
-                data, label = data.to(device), label.to(device)
+                data, label = data.to(device), label.to(device, dtype=torch.int64)
                 
                 opt.zero_grad()
                 output = model(data)
@@ -220,7 +220,7 @@ class Trainer():
             if va_loader is not None:
                 model.eval()
                 t1 = time()
-                va_acc, va_loss = self.test(model, va_loader, device, False, True, criterion)
+                va_acc, va_loss = self.test_array(model, va_loader, device, False, True, criterion)
 
                 va_acc = va_acc * 100.0
                 val_loss_list.append(va_loss)
@@ -267,7 +267,7 @@ class Trainer():
         #turn off backprop (important to avoid cuda memory error)
         with torch.no_grad():
             for data,labels in loader:
-                data, labels = data.to(device), labels.to(device)
+                data, labels = data.to(device), labels.to(device, dtype=torch.int64)
                 #forward
                 output = model(data)
                 if criterion is not None:
@@ -295,7 +295,7 @@ class Trainer():
 class MyDataset(Dataset):
     def __init__(self, data, target, transform=None):
         self.data = torch.Tensor(data)
-        self.target = torch.Tensor(target)
+        self.target = torch.Tensor([target[i][0] for i in range(len(target))])
         self.transform = transform
         
     def __getitem__(self, index):
@@ -355,12 +355,8 @@ def main(args):
             train_target_real=[np.ones(1, dtype=np.long) for i in range(len(train_real))]
 
             train_fake.extend(train_real)
-            #train_array=torch.Tensor(train_fake)
             train_target_fake.extend(train_target_real)
-            #train_targets=torch.Tensor(train_target_fake, dtype=torch.long)
-            #train_set = TensorDataset(train_array,train_targets)
-
-            train_set = MyDataset(train_fake, train_target_fake, transform=transform)
+            train_set = MyDataset(train_fake, train_target_fake)
 
             #BUILD VAL SET
             val_fake=[np.load(join(args.val_root,'fake',array)) for array in os.listdir(join(args.val_root, 'fake'))]
@@ -370,12 +366,9 @@ def main(args):
             val_target_real=[np.ones(1, dtype=np.long) for i in range(len(val_real))]
 
             val_fake.extend(val_real)
-            #val_array=torch.Tensor(val_fake)
             val_target_fake.extend(val_target_real)
-            #val_targets=torch.Tensor(val_target_fake, dtype=torch.long)
-            #val_set = TensorDataset(val_array, val_targets)
 
-            val_set = MyDataset(val_fake, val_target_fake, transform=transform)
+            val_set = MyDataset(val_fake, val_target_fake)
         else:
             transform = transforms.Compose([transforms.Resize((299,299)),
                     transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -404,10 +397,9 @@ def main(args):
             test_target_real=[np.ones(1, dtype=np.int64) for i in range(len(test_real))]
 
             test_fake.extend(test_real)
-            test_array=torch.Tensor(test_fake)
             test_target_fake.extend(test_target_real)
-            test_targets=torch.Tensor(test_target_fake, dtype=torch.long)
-            te_dataset = TensorDataset(test_array,test_targets)
+            
+            te_dataset = MyDataset(test_fake,test_target_fake)
         else:
             te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
             
