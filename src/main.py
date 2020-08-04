@@ -351,8 +351,8 @@ def main(args):
             train_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(join(args.data_root, 'fake'))]
             train_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(join(args.data_root, 'real'))]
 
-            train_target_fake=[np.zeros(1, dtype=np.float64) for i in range(len(train_fake))]
-            train_target_real=[np.ones(1, dtype=np.float64) for i in range(len(train_real))]
+            train_target_fake=[np.zeros(1, dtype=np.long) for i in range(len(train_fake))]
+            train_target_real=[np.ones(1, dtype=np.long) for i in range(len(train_real))]
 
             train_fake.extend(train_real)
             #train_array=torch.Tensor(train_fake)
@@ -366,8 +366,8 @@ def main(args):
             val_fake=[np.load(join(args.val_root,'fake',array)) for array in os.listdir(join(args.val_root, 'fake'))]
             val_real=[np.load(join(args.val_root,'real',array)) for array in os.listdir(join(args.val_root, 'real'))]
 
-            val_target_fake=[np.zeros(1, dtype=np.float64) for i in range(len(val_fake))]
-            val_target_real=[np.ones(1, dtype=np.float64) for i in range(len(val_real))]
+            val_target_fake=[np.zeros(1, dtype=np.long) for i in range(len(val_fake))]
+            val_target_real=[np.ones(1, dtype=np.long) for i in range(len(val_real))]
 
             val_fake.extend(val_real)
             #val_array=torch.Tensor(val_fake)
