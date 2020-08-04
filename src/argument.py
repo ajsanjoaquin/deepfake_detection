@@ -1,7 +1,7 @@
 import argparse
 
 def parser():
-    parser = argparse.ArgumentParser(description='Video Summarization')
+    parser = argparse.ArgumentParser(description='Arguments for All scripts')
     parser.add_argument('--todo', choices=['train', 'valid', 'test', 'visualize'], default='train',
         help='what behavior want to do: train | valid | test | visualize')
     parser.add_argument('--model', choices=['xception', 'enet'], help='what model to use')
@@ -15,15 +15,6 @@ def parser():
     parser.add_argument('--affix', default='', help='the affix for the save folder')
     parser.add_argument('--output', help='specify location of output')
 
-    # parameters for generating adversarial examples
-    parser.add_argument('--adv',type=bool,default=False, help='select adversarial testing or training')
-    parser.add_argument('--epsilon', '-e', type=float, default=0.0157, 
-        help='maximum perturbation of adversaries (4/255=0.0157)')
-    parser.add_argument('--alpha', '-a', type=float, default=0.00784, 
-        help='movement multiplier per iteration when generating adversarial examples (2/255=0.00784)')
-    parser.add_argument('--k', '-k', type=int, default=10, 
-        help='maximum iteration when generating adversarial examples')
-
     parser.add_argument('--batch_size', '-b', type=int, default=128, help='batch size')
     parser.add_argument('--max_epoch', '-m_e', type=int, default=200, 
         help='the maximum numbers of the model see a sample')
@@ -31,18 +22,9 @@ def parser():
     parser.add_argument('--weight_decay', '-w', type=float, default=2e-4, 
         help='the parameter of l2 restriction for weights')
 
-    parser.add_argument('--gpu', '-g', default='0', help='which gpu to use')
-    parser.add_argument('--n_eval_step', type=int, default=100, 
-        help='number of iteration per one evaluation')
-    parser.add_argument('--n_checkpoint_step', type=int, default=4000, 
-        help='number of iteration to save a checkpoint')
-    parser.add_argument('--n_store_image_step', type=int, default=4000, 
-        help='number of iteration to save adversaries')
-    parser.add_argument('--perturbation_type', '-p', choices=['linf', 'l2'], default='linf', 
-        help='the type of the perturbation (linf or l2)')
-    
-    parser.add_argument('--adv_train', action='store_true')
-    parser.add_argument('--init_load', default= None)
+    parser.add_argument('--adv_train', action='store_true', help='set to adversarial training')
+    parser.add_argument('--epsilon', '-e', type=float, default=0.0157, help='maximum perturbation of adversaries (4/255=0.0157)')
+    parser.add_argument('--init_load', default= None , help= 'path to imagenet weights if finetuning model from imagenet checkpoint')
     parser.add_argument('--normalize', choices=['local','global','sign'],default = None, help = 'For generating gradients script; type of normalization')
     parser.add_argument('--array', default= None, help= 'set to True to when using numpy arrays for training and testing model')
     return parser.parse_args()
