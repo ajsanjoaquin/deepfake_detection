@@ -226,8 +226,8 @@ def main(args):
     if args.todo == 'train':
         if args.array:
             #BUILD TRAIN SET
-            train_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(args.data_root)]
-            train_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(args.data_root)]
+            train_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(join(args.data_root, 'fake'))]
+            train_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(join(args.data_root, 'real'))]
 
             train_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(train_fake))]
             train_target_real=[np.ones(1, dtype=np.int64) for i in range(len(train_real))]
@@ -237,8 +237,8 @@ def main(args):
             train_set = TensorDatasetWithPaths(train_array,train_targets)
 
             #BUILD VAL SET
-            val_fake=[np.load(join(args.val_root,'fake',array)) for array in os.listdir(args.val_root)]
-            val_real=[np.load(join(args.val_root,'real',array)) for array in os.listdir(args.val_root)]
+            val_fake=[np.load(join(args.val_root,'fake',array)) for array in os.listdir(join(args.val_root, 'fake'))]
+            val_real=[np.load(join(args.val_root,'real',array)) for array in os.listdir(join(args.val_root, 'real'))]
 
             val_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(val_fake))]
             val_target_real=[np.ones(1, dtype=np.int64) for i in range(len(val_real))]
@@ -260,8 +260,8 @@ def main(args):
     elif args.todo == 'test':
         if args.array:
             #BUILD TEST SET
-            test_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(args.data_root)]
-            test_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(args.data_root)]
+            test_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(join(args.data_root, 'fake'))]
+            test_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(join(args.data_root, 'real'))]
 
             test_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(test_fake))]
             test_target_real=[np.ones(1, dtype=np.int64) for i in range(len(test_real))]
