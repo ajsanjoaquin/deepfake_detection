@@ -345,8 +345,7 @@ def main(args):
 
     if args.todo == 'train':
         if args.array:
-            transform = transforms.Compose([ transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-                        ])
+            transform = transforms.Normalize(mean=[0.5], std=[0.5])
             train_fake = join(args.data_root, 'fake')
             train_real = join(args.data_root, 'real')
             #BUILD TRAIN SET
@@ -357,7 +356,9 @@ def main(args):
             train_target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(train_real) if os.path.isfile(array)]))])
             train_target=[train_target[i][0] for i in range(len(train_target))]
 
-            train_set = MyDataset(train_data, train_target)
+            print("Train data and target created successfully")
+            train_set = MyDataset(train_data, train_target, transform=transform)
+            print("Dataset is successful")
 
             #BUILD VAL SET
             val_fake = join(args.val_root, 'fake')
@@ -381,8 +382,8 @@ def main(args):
         logger.info('Val Total: %d'%len(val_set))
         #logger.info( "Classes: {}".format(' '.join(map(str, train_set.classes))))
 
-        tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4)
-        te_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4)
+        tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=torch.cuda.is_available())
+        te_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=torch.cuda.is_available())
 
         if args.array:
             trainer.train_array(model, tr_loader, te_loader, device, adv_train=args.adv)
@@ -406,7 +407,7 @@ def main(args):
         else:
             te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
             
-        te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
+        te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=torch.cuda.is_available())
 
         if args.array:
             std_acc, loss= trainer.test_array(model, te_loader, device, adv_test=args.adv)
