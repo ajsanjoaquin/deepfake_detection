@@ -294,8 +294,8 @@ class Trainer():
 
 class MyDataset(Dataset):
     def __init__(self, data, target, transform=None):
-        self.data = torch.Tensor(data)
-        self.target = torch.Tensor([target[i][0] for i in range(len(target))])
+        self.data = torch.from_numpy(data)
+        self.target = torch.from_numpy([target[i][0] for i in range(len(target))])
         self.transform = transform
         
     def __getitem__(self, index):
