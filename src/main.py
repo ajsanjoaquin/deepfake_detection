@@ -382,8 +382,8 @@ def main(args):
         logger.info('Val Total: %d'%len(val_set))
         #logger.info( "Classes: {}".format(' '.join(map(str, train_set.classes))))
 
-        tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=torch.cuda.is_available())
-        te_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=torch.cuda.is_available())
+        tr_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.nworkers, pin_memory=torch.cuda.is_available())
+        te_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=args.nworkers, pin_memory=torch.cuda.is_available())
 
         if args.array:
             trainer.train_array(model, tr_loader, te_loader, device, adv_train=args.adv)
@@ -407,7 +407,7 @@ def main(args):
         else:
             te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
             
-        te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=torch.cuda.is_available())
+        te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.nworkers, pin_memory=torch.cuda.is_available())
 
         if args.array:
             std_acc, loss= trainer.test_array(model, te_loader, device, adv_test=args.adv)

@@ -16,6 +16,7 @@ def parser():
     parser.add_argument('--output', help='specify location of output')
 
     parser.add_argument('--batch_size', '-b', type=int, default=128, help='batch size')
+    parser.add_argument('--nworkers', type=int, default=4, help='number of workers')
     parser.add_argument('--max_epoch', '-m_e', type=int, default=200, 
         help='the maximum numbers of the model see a sample')
     parser.add_argument('--learning_rate', '-lr', type=float, default=1e-2, help='learning rate')
