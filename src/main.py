@@ -295,7 +295,7 @@ class Trainer():
 class MyDataset(Dataset):
     def __init__(self, data, target, transform=None):
         self.data = torch.from_numpy(data)
-        self.target = torch.from_numpy([target[i][0] for i in range(len(target))])
+        self.target = torch.from_numpy(target)
         self.transform = transform
         
     def __getitem__(self, index):
@@ -347,28 +347,30 @@ def main(args):
         if args.array:
             transform = transforms.Compose([ transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
                         ])
+            train_fake = join(args.data_root, 'fake')
+            train_real = join(args.data_root, 'real')
             #BUILD TRAIN SET
-            train_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(join(args.data_root, 'fake'))]
-            train_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(join(args.data_root, 'real'))]
+            train_data=[np.load(join(train_fake, array)) for array in os.listdir(train_fake)]
+            train_data.extend([np.load(join(train_real, array)) for array in os.listdir(train_real)])
 
-            train_target_fake=[np.zeros(1, dtype=np.long) for i in range(len(train_fake))]
-            train_target_real=[np.ones(1, dtype=np.long) for i in range(len(train_real))]
+            train_target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(train_fake) if os.path.isfile(array)]))]
+            train_target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(train_real) if os.path.isfile(array)]))])
+            train_target=[train_target[i][0] for i in range(len(train_target))]
 
-            train_fake.extend(train_real)
-            train_target_fake.extend(train_target_real)
-            train_set = MyDataset(train_fake, train_target_fake)
+            train_set = MyDataset(train_data, train_target)
 
             #BUILD VAL SET
-            val_fake=[np.load(join(args.val_root,'fake',array)) for array in os.listdir(join(args.val_root, 'fake'))]
-            val_real=[np.load(join(args.val_root,'real',array)) for array in os.listdir(join(args.val_root, 'real'))]
+            val_fake = join(args.val_root, 'fake')
+            val_real = join(args.val_root, 'real')
 
-            val_target_fake=[np.zeros(1, dtype=np.long) for i in range(len(val_fake))]
-            val_target_real=[np.ones(1, dtype=np.long) for i in range(len(val_real))]
+            val_data=[np.load(join(val_fake, array)) for array in os.listdir(val_fake)]
+            val_data.extend([np.load(join(val_real, array)) for array in os.listdir(val_real)])
 
-            val_fake.extend(val_real)
-            val_target_fake.extend(val_target_real)
+            val_target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(val_fake) if os.path.isfile(array)]))]
+            val_target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(val_real) if os.path.isfile(array)]))])
+            val_target=[val_target[i][0] for i in range(len(val_target))]
 
-            val_set = MyDataset(val_fake, val_target_fake)
+            val_set = MyDataset(val_data, val_target)
         else:
             transform = transforms.Compose([transforms.Resize((299,299)),
                     transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -390,16 +392,17 @@ def main(args):
     elif args.todo == 'test':
         if args.array:
             #BUILD TEST SET
-            test_fake=[np.load(join(args.data_root,'fake',array)) for array in os.listdir(join(args.data_root, 'fake'))]
-            test_real=[np.load(join(args.data_root,'real',array)) for array in os.listdir(join(args.data_root, 'real'))]
+            test_fake = join(args.data_root, 'fake')
+            test_real = join(args.data_root, 'real')
+            #BUILD TRAIN SET
+            test_data=[np.load(join(test_fake, array)) for array in os.listdir(test_fake)]
+            test_data.extend([np.load(join(test_real, array)) for array in os.listdir(test_real)])
 
-            test_target_fake=[np.zeros(1, dtype=np.int64) for i in range(len(test_fake))]
-            test_target_real=[np.ones(1, dtype=np.int64) for i in range(len(test_real))]
+            test_target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(test_fake) if os.path.isfile(array)]))]
+            test_target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(test_real) if os.path.isfile(array)]))])
+            test_target=[test_target[i][0] for i in range(len(test_target))]
 
-            test_fake.extend(test_real)
-            test_target_fake.extend(test_target_real)
-            
-            te_dataset = MyDataset(test_fake,test_target_fake)
+            te_dataset = MyDataset(test_data, test_target)
         else:
             te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
             
