@@ -23,7 +23,7 @@ def parser():
     parser.add_argument('--weight_decay', '-w', type=float, default=2e-4, 
         help='the parameter of l2 restriction for weights')
 
-    parser.add_argument('--adv_train', action='store_true', help='set to adversarial training')
+    parser.add_argument('--adv', action='store_true', help='set to adversarial training')
     parser.add_argument('--epsilon', '-e', type=float, default=0.0157, help='maximum perturbation of adversaries (4/255=0.0157)')
     parser.add_argument('--init_load', default= None , help= 'path to imagenet weights if finetuning model from imagenet checkpoint')
     parser.add_argument('--normalize', choices=['local','global','sign'],default = None, help = 'For generating gradients script; type of normalization')
