@@ -309,13 +309,12 @@ class MyDataset(Dataset):
         real = join(self.data_root, 'real')
         data=[np.load(join(fake, array)) for array in os.listdir(fake)]
         data.extend([np.load(join(real, array)) for array in os.listdir(real)])
-
-        target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(fake) if os.path.isfile(array)]))]
-        target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(real) if os.path.isfile(array)]))])
+        target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(fake)]))]
+        target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(real)]))])
         target=[target[i][0] for i in range(len(target))]
         
-        self.data = torch.from_numpy(data)
-        self.target = torch.from_numpy(target)
+        self.data = torch.Tensor(data)
+        self.target = torch.Tensor(target)
         x = self.data[index]
         y = self.target[index]
         
