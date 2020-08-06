@@ -293,7 +293,15 @@ class Trainer():
         return test_correct/total, 0
 
 class MyDataset(Dataset):
-    def __init__(self, data, target, transform=None):
+    def __init__(self, data_root, transform=None):
+        fake = join(data_root, 'fake')
+        real = join(data_root, 'real')
+        data=[np.load(join(fake, array)) for array in os.listdir(fake)]
+        data.extend([np.load(join(real, array)) for array in os.listdir(real)])
+
+        target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(fake) if os.path.isfile(array)]))]
+        target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(real) if os.path.isfile(array)]))])
+        target=[target[i][0] for i in range(len(target))]
         self.data = torch.from_numpy(data)
         self.target = torch.from_numpy(target)
         self.transform = transform
@@ -346,32 +354,14 @@ def main(args):
     if args.todo == 'train':
         if args.array:
             transform = transforms.Normalize(mean=[0.5], std=[0.5])
-            train_fake = join(args.data_root, 'fake')
-            train_real = join(args.data_root, 'real')
+
             #BUILD TRAIN SET
-            train_data=[np.load(join(train_fake, array)) for array in os.listdir(train_fake)]
-            train_data.extend([np.load(join(train_real, array)) for array in os.listdir(train_real)])
-
-            train_target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(train_fake) if os.path.isfile(array)]))]
-            train_target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(train_real) if os.path.isfile(array)]))])
-            train_target=[train_target[i][0] for i in range(len(train_target))]
-
-            print("Train data and target created successfully")
-            train_set = MyDataset(train_data, train_target, transform=transform)
+            print("Initializing Dataset...")
+            train_set = MyDataset(args.data_root, transform=transform)
             print("Dataset is successful")
 
             #BUILD VAL SET
-            val_fake = join(args.val_root, 'fake')
-            val_real = join(args.val_root, 'real')
-
-            val_data=[np.load(join(val_fake, array)) for array in os.listdir(val_fake)]
-            val_data.extend([np.load(join(val_real, array)) for array in os.listdir(val_real)])
-
-            val_target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(val_fake) if os.path.isfile(array)]))]
-            val_target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(val_real) if os.path.isfile(array)]))])
-            val_target=[val_target[i][0] for i in range(len(val_target))]
-
-            val_set = MyDataset(val_data, val_target)
+            val_set = MyDataset(args.val_root, transform=transform)
         else:
             transform = transforms.Compose([transforms.Resize((299,299)),
                     transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -392,18 +382,7 @@ def main(args):
 
     elif args.todo == 'test':
         if args.array:
-            #BUILD TEST SET
-            test_fake = join(args.data_root, 'fake')
-            test_real = join(args.data_root, 'real')
-            #BUILD TRAIN SET
-            test_data=[np.load(join(test_fake, array)) for array in os.listdir(test_fake)]
-            test_data.extend([np.load(join(test_real, array)) for array in os.listdir(test_real)])
-
-            test_target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(test_fake) if os.path.isfile(array)]))]
-            test_target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(test_real) if os.path.isfile(array)]))])
-            test_target=[test_target[i][0] for i in range(len(test_target))]
-
-            te_dataset = MyDataset(test_data, test_target)
+            te_dataset = MyDataset(args.data_root, transform=transform)
         else:
             te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
             
