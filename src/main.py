@@ -8,6 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 
 import torchvision as tv
 from torchvision import transforms
+from torchvision.datasets import DatasetFolder
 from time import time
 from .models import model_selection
 from src.utils import makedirs, create_logger, tensor2cuda, save_model
@@ -292,40 +293,6 @@ class Trainer():
             return test_correct/total, test_loss
         return test_correct/total, 0
 
-class MyDataset(Dataset):
-    def __init__(self, data_root, transform=None):
-        self.data_root = data_root
-
-        fake = join(self.data_root, 'fake')
-        real = join(self.data_root, 'real')
-        data=[array for array in os.listdir(fake)]
-        data.extend([array for array in os.listdir(real)])
-
-        self.data = data
-        self.transform = transform
-        
-    def __getitem__(self, index):
-        fake = join(self.data_root, 'fake')
-        real = join(self.data_root, 'real')
-        data=[np.load(join(fake, array)) for array in os.listdir(fake)]
-        data.extend([np.load(join(real, array)) for array in os.listdir(real)])
-        target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(fake)]))]
-        target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(real)]))])
-        target=[target[i][0] for i in range(len(target))]
-        
-        self.data = torch.Tensor(data)
-        self.target = torch.Tensor(target)
-        x = self.data[index]
-        y = self.target[index]
-        
-        if self.transform:
-            x = self.transform(x)
-        
-        return x, y
-    
-    def __len__(self):
-        return len(self.data)
-
 def main(args):
     device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     makedirs(args.log_root)
@@ -362,14 +329,17 @@ def main(args):
     if args.todo == 'train':
         if args.array:
             transform = transforms.Normalize(mean=[0.5], std=[0.5])
+            def npy_loader(path):
+                sample = torch.from_numpy(np.load(path))
+                return sample
 
             #BUILD TRAIN SET
             print("Initializing Dataset...")
-            train_set = MyDataset(args.data_root, transform=transform)
+            train_set = DatasetFolder(root=args.data_root, loader=npy_loader, extensions=['.npy'], transform= transform)
             print("Dataset is successful")
 
             #BUILD VAL SET
-            val_set = MyDataset(args.val_root, transform=transform)
+            val_set = DatasetFolder(root=args.val_root, loader=npy_loader, extensions=['.npy'], transform= transform)
         else:
             transform = transforms.Compose([transforms.Resize((299,299)),
                     transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -390,7 +360,12 @@ def main(args):
 
     elif args.todo == 'test':
         if args.array:
-            te_dataset = MyDataset(args.data_root, transform=transform)
+            transform = transforms.Normalize(mean=[0.5], std=[0.5])
+            def npy_loader(path):
+                sample = torch.from_numpy(np.load(path))
+                return sample
+                
+            te_dataset = DatasetFolder(root=args.data_root, loader=npy_loader, extensions=['.npy'], transform= transform)
         else:
             te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
             
