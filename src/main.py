@@ -335,11 +335,11 @@ def main(args):
 
             #BUILD TRAIN SET
             print("Initializing Dataset...")
-            train_set = DatasetFolder(root=args.data_root, loader=npy_loader, extensions=['.npy'], transform= transform)
+            train_set = DatasetFolder(root=args.data_root, loader=npy_loader, extensions='.npy', transform= transform)
             print("Dataset is successful")
 
             #BUILD VAL SET
-            val_set = DatasetFolder(root=args.val_root, loader=npy_loader, extensions=['.npy'], transform= transform)
+            val_set = DatasetFolder(root=args.val_root, loader=npy_loader, extensions='.npy', transform= transform)
         else:
             transform = transforms.Compose([transforms.Resize((299,299)),
                     transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -364,8 +364,8 @@ def main(args):
             def npy_loader(path):
                 sample = torch.from_numpy(np.load(path))
                 return sample
-                
-            te_dataset = DatasetFolder(root=args.data_root, loader=npy_loader, extensions=['.npy'], transform= transform)
+
+            te_dataset = DatasetFolder(root=args.data_root, loader=npy_loader, extensions='.npy', transform= transform)
         else:
             te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
             
