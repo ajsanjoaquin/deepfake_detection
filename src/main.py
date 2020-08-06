@@ -295,6 +295,13 @@ class Trainer():
 class MyDataset(Dataset):
     def __init__(self, data_root, transform=None):
         self.data_root = data_root
+
+        fake = join(self.data_root, 'fake')
+        real = join(self.data_root, 'real')
+        data=[array for array in os.listdir(fake)]
+        data.extend([array for array in os.listdir(real)])
+
+        self.data = data
         self.transform = transform
         
     def __getitem__(self, index):
@@ -306,6 +313,7 @@ class MyDataset(Dataset):
         target=[np.zeros(1, dtype=np.long) for i in range(len([array for array in os.listdir(fake) if os.path.isfile(array)]))]
         target.extend([np.ones(1, dtype=np.long) for i in range(len([array for array in os.listdir(real) if os.path.isfile(array)]))])
         target=[target[i][0] for i in range(len(target))]
+        
         self.data = torch.from_numpy(data)
         self.target = torch.from_numpy(target)
         x = self.data[index]
