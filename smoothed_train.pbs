@@ -1,0 +1,26 @@
+#!/bin/sh
+#PBS -N smoothed_train
+#PBS -q gpu
+#PBS -l select=3:ngpus=1:ncpus=24:mem=96gb
+#PBS -l walltime=24:00:00
+#PBS -j oe
+## change next line to correct project code:
+#PBS -P <blank>
+
+cd $PBS_O_WORKDIR
+
+# Load container environment
+module load singularity/latest
+
+# Usage method 2: start a shell and pass the python command on the standard input
+singularity exec --nv ../pytorch.sif /bin/bash << EOF
+whoami
+pwd
+nvidia-smi
+python -m src.code.train FaceForensics xception smoothed_checkpoints --data_root ../crop_train \
+--test_root ../c23_test/crop \
+--batch 20 \
+--epochs 40 \
+--pretrained-model xception_first_time \
+--noise_sd 0.25
+EOF

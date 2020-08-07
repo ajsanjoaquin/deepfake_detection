@@ -1,0 +1,50 @@
+#!/bin/sh
+#PBS -N m4_test
+#PBS -q gpu
+#PBS -l select=1:ngpus=1:ncpus=24:mem=30gb
+#PBS -l walltime=8:00:00
+#PBS -j oe
+## change next line to correct project code:
+#PBS -P <blank>
+cd "$PBS_O_WORKDIR"
+
+# Specify which Docker image to use for container
+image="ajsanjoaquin/pytorch_w_cv2_plt:stable"
+
+module load singularity/latest
+singularity exec --nv ../pytorch.sif /bin/bash << EOF
+nvidia-smi
+
+python -m src.main --todo test --data_root ../c23_test/grada \
+--model xception \
+--array True \
+--batch_size 40 \
+--load_checkpoint m4A/checkpoint_3.pth \
+--log_root m4_test \
+--affix c23A
+
+python -m src.main --todo test --data_root ../c23_test/gradb \
+--model xception \
+--array True \
+--batch_size 40 \
+--load_checkpoint m4B/checkpoint_2.pth \
+--log_root m4_test \
+--affix c23B
+
+python -m src.main --todo test --data_root ../c23_test/gradc \
+--model xception \
+--array True \
+--batch_size 40 \
+--load_checkpoint m4C/checkpoint_4.pth \
+--log_root m4_test \
+--affix c23C
+
+python -m src.main --todo test --data_root ../c23_test/gradd \
+--model xception \
+--array True \
+--batch_size 40 \
+--load_checkpoint m4D/checkpoint_4.pth \
+--log_root m4_test \
+--affix c23D
+
+EOF

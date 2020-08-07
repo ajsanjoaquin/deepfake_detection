@@ -1,0 +1,28 @@
+#!/bin/sh
+#PBS -N m4A
+#PBS -q gpu
+#PBS -l select=1:ngpus=1:ncpus=24:mem=15gb
+#PBS -l walltime=12:00:00
+#PBS -j oe
+## change next line to correct project code:
+#PBS -P <blank>
+cd "$PBS_O_WORKDIR"
+
+# Specify which Docker image to use for container
+image="ajsanjoaquin/pytorch_w_cv2_plt:stable"
+
+module load singularity/latest
+singularity exec --nv ../pytorch.sif /bin/bash << EOF
+nvidia-smi
+
+python -m src.main --todo train --data_root ../c23_train/grada \
+--val_root ../c23_val/grada \
+--model xception \
+--array True \
+--batch_size 40 \
+--nworkers 4 \
+--max_epoch 40 \
+--init_load ../xception-b5690688.pth \
+--model_folder m4A \
+--log_root m4A
+EOF

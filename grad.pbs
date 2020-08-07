@@ -1,0 +1,22 @@
+#!/bin/sh
+#PBS -N grad_train1A
+#PBS -q gpu
+#PBS -l select=1:ngpus=1:ncpus=24:mem=88gb
+#PBS -l walltime=4:00:00
+#PBS -j oe
+## change next line to correct project code:
+#PBS -P 14001679
+
+cd $PBS_O_WORKDIR
+
+# Load container environment
+module load singularity/latest
+singularity exec --nv ../pytorch.sif /bin/bash << EOF
+whoami
+python -m src.generate_gradients --data_root /scratch/users/nus/dcsduxi/FF++/c23_train/crop1 \
+--normalize local \
+--batch_size 40 \
+--load_checkpoint m3_chkpts/checkpoint_3.pth \
+--output /scratch/users/nus/dcsduxi/FF++/c23_train/grad1a
+
+EOF
