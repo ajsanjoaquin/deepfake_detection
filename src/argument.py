@@ -26,7 +26,7 @@ def parser():
     parser.add_argument('--adv', action='store_true', help='set to adversarial training')
     parser.add_argument('--epsilon', '-e', type=float, default=0.0157, help='maximum perturbation of adversaries (4/255=0.0157)')
     parser.add_argument('--init_load', default= None , help= 'path to imagenet weights if finetuning model from imagenet checkpoint')
-    parser.add_argument('--normalize', choices=['local','global','sign'],default = None, help = 'For generating gradients script; type of normalization')
+    parser.add_argument('--normalize', choices=['local','global','sign','image'],default = None, help = 'For generating gradients script; type of normalization')
     parser.add_argument('--array', default= None, help= 'set to True to when using numpy arrays for training and testing model')
     return parser.parse_args()
 

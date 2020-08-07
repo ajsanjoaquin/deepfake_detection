@@ -113,10 +113,37 @@ if args.normalize == 'global':
     normalized = (grad - global_min) / (global_max - global_min)
     labellist.extend(label)
     gradlist.extend(normalized)
+    
+#generating gradients and saving them as image
+if args.normalize == 'image':
+  for data, label in tqdm(te_loader):
+    data, label = tensor2cuda(data), tensor2cuda(label)
+    #make every target label real
+    tf=np.ones(len(data), dtype=np.int64)
+    x=torch.from_numpy(tf)
+    x=x.cuda()
+
+    VBP = VanillaBackprop(model)
+    grad = VBP.generate_gradients(data, x)
+    grad = grad.cpu().numpy().squeeze() *255 # (N, 28, 28)
+
+    labellist.extend(label)
+    gradlist.extend(grad)
+
+  #do for each image
+  for i in tqdm(range(len(te_dataset.samples))):
+      img = gradlist[i]
+      img = np.transpose(img, (1, 2, 0))
+      if label_dict[labellist[i].item()]=='fake':
+          cv2.imwrite(os.path.join(fake, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
+      else:
+          cv2.imwrite(os.path.join(real, '{}_grad_{}.png'.format(basename(args.output),i+1)),img)
+
 
 # saving as np array
-for i in tqdm(range(len(te_dataset.samples))):
-    if label_dict[labellist[i].item()]=='fake':
-        np.save(os.path.join(fake, '{}_{}'.format(basename(args.output),i+1)), gradlist[i])
-    else:
-        np.save(os.path.join(real, '{}_{}'.format(basename(args.output),i+1)), gradlist[i])
+else:
+  for i in tqdm(range(len(te_dataset.samples))):
+      if label_dict[labellist[i].item()]=='fake':
+          np.save(os.path.join(fake, '{}_{}'.format(basename(args.output),i+1)), gradlist[i])
+      else:
+          np.save(os.path.join(real, '{}_{}'.format(basename(args.output),i+1)), gradlist[i])
