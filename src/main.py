@@ -88,7 +88,7 @@ class Trainer():
                 loss.backward()
                 opt.step()
 
-                running_loss += loss.item() * data.size(0)
+                running_loss += loss.item()
 
                 _, pred = torch.max(output.data, dim=1)
                 correct += (pred == label).sum().item()
@@ -96,7 +96,7 @@ class Trainer():
 
                     
             std_acc= (correct/total) * 100
-            tr_loss= running_loss / len(tr_loader)
+            tr_loss= running_loss / total
             tr_loss_list.append(tr_loss)
 
             if va_loader is not None:
@@ -156,7 +156,7 @@ class Trainer():
                 output = model(data)
                 if criterion is not None:
                     loss = criterion(output, labels)
-                    running_loss += loss.item() * data.size(0)
+                    running_loss += loss.item() 
                 #return probabilities for dataframe
                 if valid ==False:
                     preds= torch.nn.functional.softmax(output)
