@@ -261,6 +261,9 @@ def main(args):
 
             te_dataset = DatasetFolderWithPaths(root=args.data_root, loader=npy_loader, extensions='.npy', transform= transform)
         else:
+            transform = transforms.Compose([transforms.Resize((299,299)),
+            transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+            ])
             te_dataset=ImageFolderWithPaths(args.data_root,transform=transform)
             
         te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.nworkers, pin_memory=torch.cuda.is_available())
